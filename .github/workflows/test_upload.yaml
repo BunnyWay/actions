@@ -9,6 +9,9 @@ jobs:
     name: 'Upload script'
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - uses: BunnyWay/actions/deploy-script@test
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
