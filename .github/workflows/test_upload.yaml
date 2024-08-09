@@ -14,4 +14,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           script_id: ${{ secrets.SCRIPT_ID }}
           access_key: ${{ secrets.ACCESS_KEY }}
-          file: "./test.ts"
+          file: "test.ts"
