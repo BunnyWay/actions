@@ -4,7 +4,19 @@ description: Use this action to upload an EdgeScript to your Bunny Pullzone.
 
 inputs:
   token:
-    description: A Github token.
+    description: Github token.
+    required: true
+
+  script_id:
+    description: The ScriptID associated to your Pullzone.
+    required: true
+
+  access_key:
+    description: The associated AccessKey or DeployKey from Bunny.
+    required: true
+
+  file:
+    description: The file path for the script.
     required: true
 
 runs:
