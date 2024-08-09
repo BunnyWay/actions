@@ -1,0 +1,16 @@
+name: Deploy Script to Bunny
+author: Bunny Devs
+description: Use this action to upload an EdgeScript to your Bunny Pullzone.
+
+inputs:
+  token:
+    description: A Github token.
+    required: true
+
+runs:
+  using: 'node20'
+  main: 'lib/main.js'
+
+branding:
+  color: 'orange'
+  icon: 'upload-cloud'
