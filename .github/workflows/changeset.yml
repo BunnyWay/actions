@@ -30,6 +30,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          publish: "pnpm run -r build"
+          publish: "pnpm run -r build && git add ."
           title: "🎉 Release"
           createGithubReleases: true
