@@ -1,0 +1,18 @@
+name: On merge changeset
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - 'main'
+
+jobs:
+  publish:
+    if: contains(github.event.pull_request.head.ref, 'changeset-release')
+
+    name: 'Build and push action'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4

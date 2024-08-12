@@ -1,0 +1,12 @@
+{
+  "name": "bunny-actions",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "preinstall": "npx only-allow pnpm"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@changesets/cli": "^2.26.2"
+  }
+}
