@@ -11,7 +11,7 @@ jest.mock('./bunny');
 
 describe('action', () => {
   const mockClient = {};
-  // @ts-ignore
+  // @ts-expect-error To fix
   const mockDeployScript = jest.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
@@ -71,7 +71,7 @@ describe('action', () => {
   });
 
   test('should fail if deploying the script fails', async () => {
-    // @ts-ignore
+    // @ts-expect-error To fix
     mockDeployScript.mockRejectedValue(new Error('Deployment error'));
 
     await run();
