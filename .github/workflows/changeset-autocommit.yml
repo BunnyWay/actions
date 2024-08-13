@@ -3,7 +3,7 @@ name: Update Changeset
 on:
   push:
     branches:
-      - changeset-release/main
+      - 'changeset-release/main'
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
