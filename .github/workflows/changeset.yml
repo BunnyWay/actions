@@ -22,7 +22,7 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-          GITHUB_TOKEN: ${{ secrets.BUNNY_GITHUB }}
+          token: ${{ secrets.BUNNY_GITHUB }}
 
       - name: Setup Javascript
         uses: ./.github/actions/setup-project
