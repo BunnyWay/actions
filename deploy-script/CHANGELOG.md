@@ -1,5 +1,11 @@
 # deploy-script
 
+## 0.2.0
+
+### Minor Changes
+
+- d25bc13: Use DeployKey instead of AccessKey
+
 ## 0.1.5
 
 ### Patch Changes
