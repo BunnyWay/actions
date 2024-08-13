@@ -24963,8 +24963,9 @@ function run() {
         try {
             // const githubToken = core.getInput('token', { required: true });
             const scriptId = core.getInput('script_id', { required: true });
-            const accessKey = core.getInput('access_key', { required: true });
-            const client = Bunny.createClient("https://api.bunny.net", accessKey);
+            const deployKey = core.getInput('deploy_key', { required: true });
+            const base = core.getInput('base', { required: false });
+            const client = Bunny.createClient(base, deployKey);
             const file_path = core.getInput('file', { required: true });
             const fileContent = yield fs.readFile(file_path, { encoding: "utf-8" });
             yield Bunny.deployScript(client)(scriptId, fileContent);
@@ -25004,7 +25005,7 @@ const deployScript = (client) => (scriptId, code) => __awaiter(void 0, void 0, v
         headers: {
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "Accesskey": client.token,
+            "DeploymentKey": client.token,
         },
         body: JSON.stringify({ Code: code }),
     });
@@ -25019,7 +25020,7 @@ const deployScript = (client) => (scriptId, code) => __awaiter(void 0, void 0, v
         headers: {
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "Accesskey": client.token,
+            "DeploymentKey": client.token,
         },
     });
     if (!responsePublish.ok) {
