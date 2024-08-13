@@ -27,8 +27,8 @@ jobs:
         run: |
           pnpm run -r build
 
-      - name: Checkout Repo
+      - name: Automatic build
         uses: stefanzweifel/git-auto-commit-action@v5
-          with: 
-            commit: "Automatic build"
-            file_pattern: '**/lib/*'
+        with: 
+          commit_message: "Automatic build"
+          file_pattern: '**/lib/*'
