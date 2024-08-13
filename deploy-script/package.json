@@ -2,6 +2,7 @@
   "name": "deploy-script",
   "version": "0.1.4",
   "main": "lib/main.js",
+  "private": true,
   "scripts": {
     "lint": "eslint src",
     "test": "jest --silent --coverage",
