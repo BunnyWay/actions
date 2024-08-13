@@ -1,6 +1,6 @@
 {
   "name": "deploy-script",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "main": "lib/main.js",
   "private": true,
   "scripts": {

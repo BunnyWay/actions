@@ -1,5 +1,11 @@
 # deploy-script
 
+## 0.1.5
+
+### Patch Changes
+
+- ab10cd5: test
+
 ## 0.1.4
 
 ### Patch Changes
