@@ -1,0 +1,33 @@
+name: Update Changeset
+
+on:
+  push:
+    branches:
+      - changeset-release/main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    permissions:
+      contents: write
+
+    if: github.repository == 'BunnyWay/actions'
+
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Javascript
+        uses: ./.github/actions/setup-project
+
+      - name: Update deployment status
+        run: |
+          pnpm run -r build
+
+      - name: Checkout Repo
+        uses: stefanzweifel/git-auto-commit-action@v5
+          with: "Automatic build"
+          file_pattern: '**/lib/*'
