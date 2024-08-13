@@ -31,7 +31,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with: 
           commit_message: "Automatic build"
-          file_pattern: '*/lib/index.js'
+          file_pattern: '*/.lib-action/index.js'
           status_options: '--untracked-files=all --ignored'
           add_options: '-f'
 

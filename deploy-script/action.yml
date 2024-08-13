@@ -21,7 +21,7 @@ inputs:
 
 runs:
   using: 'node20'
-  main: 'lib/index.js'
+  main: '.lib-action/index.js'
 
 branding:
   color: 'orange'
