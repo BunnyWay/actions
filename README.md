@@ -31,4 +31,8 @@ which need to be pushed. We handle the build of each actions with
 
 We handle versionning with [changeset](https://github.com/changesets/changesets), each time you do a change, you'll need
 to indicate the kind of changes you are doing so we can have the auto-release
-process ongoing.
+process ongoing by doing:
+
+```
+pnpm changeset
+```
