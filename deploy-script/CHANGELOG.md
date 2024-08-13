@@ -1,5 +1,21 @@
 # deploy-script
 
+## 0.1.3
+
+### Patch Changes
+
+- 9074827: de
+- 801f2da: Test
+- e3a26e7: test
+- 34bf568: Test
+- bc58470: test token
+- dd1b267: test action
+- 3802d42: Test
+- aa527a8: test
+- 6288e7f: test
+- 14e6cd0: Test bump
+- 3887f9d: Test token
+
 ## 0.1.2
 
 ### Patch Changes
