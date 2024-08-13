@@ -32,6 +32,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.BUNNY_GITHUB }}
         with:
-          publish: ""
+          publish: "echo ok"
           title: "🎉 Release"
           createGithubReleases: true
