@@ -1,10 +1,11 @@
 Github actions
 ====
 
-This is the repository where we put actions that will make you using Bunny easy!
+This is the repository where we put actions to use with
+[Bunny](https://bunny.net)!
 
 The repository is made to support many actions, each folder is corresponding to
-an action and those actions are built when we need to release those.
+an action.
 
 ## Actions
 
@@ -15,7 +16,7 @@ steps:
     - uses: BunnyWay/actions/<action>@<actions@ref>
 ```
 
-Each action will have it's own documentation, you can check this documentation
+Each action will have it's own documentation, you can check the associated documentation
 in each folder.
 
 It contains: 
