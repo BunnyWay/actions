@@ -1,5 +1,11 @@
 # deploy-script
 
+## 0.1.4
+
+### Patch Changes
+
+- a947cf6: test
+
 ## 0.1.3
 
 ### Patch Changes
