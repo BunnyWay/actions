@@ -16,7 +16,7 @@ steps:
     - uses: BunnyWay/actions/<action>@<actions@ref>
 ```
 
-Each action will have it's own documentation, you can check the associated documentation
+Each action will have its own documentation, you can check the associated documentation
 in each folder.
 
 It contains: 
