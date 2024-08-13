@@ -32,3 +32,5 @@ jobs:
         with: 
           commit_message: "Automatic build"
           file_pattern: '**/lib/*'
+          push_options: '--force'
+
