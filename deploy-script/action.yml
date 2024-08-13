@@ -11,13 +11,18 @@ inputs:
     description: The ScriptID associated to your Pullzone.
     required: true
 
-  access_key:
-    description: The associated AccessKey or DeployKey from Bunny.
+  deploy_key:
+    description: The associated DeployKey for Bunny.
     required: true
 
   file:
     description: The file path for the script.
     required: true
+
+  base:
+    description: The API endpoint - Only used for debug
+    required: false
+    default: 'https://api.bunny.net'
 
 runs:
   using: 'node20'

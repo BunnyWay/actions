@@ -23,8 +23,10 @@ describe('action', () => {
       switch (input) {
         case 'script_id':
           return "12345";
-        case 'access_key':
+        case 'deploy_key':
           return "private_token";
+        case 'base':
+          return "base_url";
         case 'file':
           return "/path/to/file";
         default:
@@ -47,11 +49,12 @@ describe('action', () => {
 
     // Verify that inputs were fetched
     expect(core.getInput).toHaveBeenCalledWith('script_id', { required: true });
-    expect(core.getInput).toHaveBeenCalledWith('access_key', { required: true });
+    expect(core.getInput).toHaveBeenCalledWith('deploy_key', { required: true });
     expect(core.getInput).toHaveBeenCalledWith('file', { required: true });
+    expect(core.getInput).toHaveBeenCalledWith('base', { required: false });
 
     // Verify that the client was created
-    expect(Bunny.createClient).toHaveBeenCalledWith("https://api.bunny.net", "private_token");
+    expect(Bunny.createClient).toHaveBeenCalledWith("base_url", "private_token");
 
     // Verify that the file was read
     expect(fs.readFile).toHaveBeenCalledWith("/path/to/file", { encoding: "utf-8" });
