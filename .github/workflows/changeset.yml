@@ -10,9 +10,9 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
   release:
     permissions:
-      contents: write  #  to create release (changesets/action)
-      issues: write # to post issue comments (changesets/action)
-      pull-requests: write  #  to create pull request (changesets/action)
+      contents: write
+      issues: write
+      pull-requests: write
 
     if: github.repository == 'BunnyWay/actions'
 

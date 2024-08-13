@@ -12,7 +12,7 @@ const deployScript = (client: BunnyClient) => async (scriptId: string, code: str
     headers: {
       "Accept": "application/json",
       "Content-Type": "application/json",
-      "Accesskey": client.token,
+      "DeploymentKey": client.token,
     },
     body: JSON.stringify({ Code: code }),
   });
@@ -30,7 +30,7 @@ const deployScript = (client: BunnyClient) => async (scriptId: string, code: str
     headers: {
       "Accept": "application/json",
       "Content-Type": "application/json",
-      "Accesskey": client.token,
+      "DeploymentKey": client.token,
     },
   });
 

@@ -6,9 +6,10 @@ export async function run() {
   try {
     // const githubToken = core.getInput('token', { required: true });
     const scriptId = core.getInput('script_id', { required: true });
-    const accessKey = core.getInput('access_key', { required: true });
+    const deployKey = core.getInput('deploy_key', { required: true });
+    const base = core.getInput('base', { required: false });
 
-    const client = Bunny.createClient("https://api.bunny.net", accessKey);
+    const client = Bunny.createClient(base, deployKey);
 
     const file_path = core.getInput('file', { required: true });
 
