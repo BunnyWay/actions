@@ -1,5 +1,11 @@
 # deploy-script
 
+## 0.3.0
+
+### Minor Changes
+
+- 34654f7: Bump version
+
 ## 0.2.0
 
 ### Minor Changes
