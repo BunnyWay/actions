@@ -1,5 +1,11 @@
 # deploy-script
 
+## 0.4.0
+
+### Minor Changes
+
+- d382bac: Add a OIDC Token
+
 ## 0.3.0
 
 ### Minor Changes
