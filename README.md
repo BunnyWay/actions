@@ -1,3 +1,9 @@
+<div align="center">
+  <a href="https://bunny.net">
+    <img src="https://github.com/BunnyWay/actions/blob/main/docs/images/bunny.png?raw=true" width="500" height="auto" alt="Bunny"/>
+  </a>
+</div>
+
 Github actions
 ====
 
