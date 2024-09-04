@@ -2,6 +2,10 @@ name: Deploy Script to Bunny
 author: Bunny Devs
 description: Use this action to upload an EdgeScript to your Bunny Pullzone.
 
+permissions:
+  id-token: write
+  contents: read
+
 inputs:
   token:
     description: Github token.
@@ -13,7 +17,7 @@ inputs:
 
   deploy_key:
     description: The associated DeployKey for Bunny.
-    required: true
+    required: false
 
   file:
     description: The file path for the script.

@@ -49,7 +49,7 @@ describe('action', () => {
 
     // Verify that inputs were fetched
     expect(core.getInput).toHaveBeenCalledWith('script_id', { required: true });
-    expect(core.getInput).toHaveBeenCalledWith('deploy_key', { required: true });
+    expect(core.getInput).toHaveBeenCalledWith('deploy_key', { required: false });
     expect(core.getInput).toHaveBeenCalledWith('file', { required: true });
     expect(core.getInput).toHaveBeenCalledWith('base', { required: false });
 

@@ -1,19 +1,45 @@
 type BunnyClient = {
   base: string,
-  token: string,
+  token: DeployKey | OIDCToken,
 };
 
-const createClient = (base: string, token: string): BunnyClient => { return ({ base, token }) };
+export type DeployKey = {
+  _internal: "deploy",
+  token: string;
+}
+
+const newDeployKey = (token: string): DeployKey => ({ _internal: "deploy", token });
+
+export type OIDCToken = {
+  _internal: "oidc",
+  token: string;
+}
+
+export type Token = OIDCToken | DeployKey;
+
+const newOIDCToken = (token: string): OIDCToken => ({ _internal: "oidc", token });
+
+const createClient = (base: string, token: Token): BunnyClient => { return ({ base, token }) };
 
 const deployScript = (client: BunnyClient) => async (scriptId: string, code: string) => {
+  const headers = {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+  };
+
+  switch (client.token._internal) {
+    case "deploy":
+      headers["DeploymentKey"] = client.token.token;
+      break;
+    case "oidc":
+      headers["GithubToken"] = client.token.token;
+      break;
+  }
+
   const endpoint_save = `${client.base}/compute/script/${scriptId}/code`;
   const response = await fetch(endpoint_save, {
     method: "POST",
-    headers: {
-      "Accept": "application/json",
-      "Content-Type": "application/json",
-      "DeploymentKey": client.token,
-    },
+    headers,
     body: JSON.stringify({ Code: code }),
   });
 
@@ -27,11 +53,7 @@ const deployScript = (client: BunnyClient) => async (scriptId: string, code: str
 
   const responsePublish = await fetch(endpoint_publish, {
     method: "POST",
-    headers: {
-      "Accept": "application/json",
-      "Content-Type": "application/json",
-      "DeploymentKey": client.token,
-    },
+    headers,
   });
 
   if (!responsePublish.ok) {
@@ -47,4 +69,6 @@ export {
   BunnyClient,
   deployScript,
   createClient,
+  newDeployKey,
+  newOIDCToken,
 }
