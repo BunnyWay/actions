@@ -24962,11 +24962,18 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             // const githubToken = core.getInput('token', { required: true });
-            const scriptId = core.getInput('script_id', { required: true });
-            const deployKey = core.getInput('deploy_key', { required: true });
-            const base = core.getInput('base', { required: false });
-            const client = Bunny.createClient(base, deployKey);
-            const file_path = core.getInput('file', { required: true });
+            const scriptId = core.getInput("script_id", { required: true });
+            const deployKey = core.getInput("deploy_key", { required: false });
+            const base = core.getInput("base", { required: false });
+            let token;
+            if (deployKey == "") {
+                token = Bunny.newOIDCToken(yield core.getIDToken());
+            }
+            else {
+                token = Bunny.newDeployKey(deployKey);
+            }
+            const client = Bunny.createClient(base, token);
+            const file_path = core.getInput("file", { required: true });
             const fileContent = yield fs.readFile(file_path, { encoding: "utf-8" });
             yield Bunny.deployScript(client)(scriptId, fileContent);
         }
@@ -24995,18 +25002,30 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createClient = exports.deployScript = void 0;
+exports.newOIDCToken = exports.newDeployKey = exports.createClient = exports.deployScript = void 0;
+const newDeployKey = (token) => ({ _internal: "deploy", token });
+exports.newDeployKey = newDeployKey;
+const newOIDCToken = (token) => ({ _internal: "oidc", token });
+exports.newOIDCToken = newOIDCToken;
 const createClient = (base, token) => { return ({ base, token }); };
 exports.createClient = createClient;
 const deployScript = (client) => (scriptId, code) => __awaiter(void 0, void 0, void 0, function* () {
+    const headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    };
+    switch (client.token._internal) {
+        case "deploy":
+            headers["DeploymentKey"] = client.token.token;
+            break;
+        case "oidc":
+            headers["GithubToken"] = client.token.token;
+            break;
+    }
     const endpoint_save = `${client.base}/compute/script/${scriptId}/code`;
     const response = yield fetch(endpoint_save, {
         method: "POST",
-        headers: {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "DeploymentKey": client.token,
-        },
+        headers,
         body: JSON.stringify({ Code: code }),
     });
     if (!response.ok) {
@@ -25017,11 +25036,7 @@ const deployScript = (client) => (scriptId, code) => __awaiter(void 0, void 0, v
     const endpoint_publish = `${client.base}/compute/script/${scriptId}/publish`;
     const responsePublish = yield fetch(endpoint_publish, {
         method: "POST",
-        headers: {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "DeploymentKey": client.token,
-        },
+        headers,
     });
     if (!responsePublish.ok) {
         console.error(`Failed to publish script: ${response.statusText}`);
