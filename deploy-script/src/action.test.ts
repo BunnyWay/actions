@@ -42,6 +42,12 @@ describe('action', () => {
 
     // Mock Bunny.deployScript to return the mock deploy function
     (Bunny.deployScript as jest.Mock).mockReturnValue(mockDeployScript);
+
+    // Mock Bunny.deployScript to return the mock deploy function
+    (Bunny.newDeployKey as jest.Mock<typeof Bunny.newDeployKey>).mockImplementation((token: string) => ({
+      _internal: "deploy",
+      token,
+    }));
   });
 
   test('should run the action successfully', async () => {
@@ -54,7 +60,7 @@ describe('action', () => {
     expect(core.getInput).toHaveBeenCalledWith('base', { required: false });
 
     // Verify that the client was created
-    expect(Bunny.createClient).toHaveBeenCalledWith("base_url", "private_token");
+    expect(Bunny.createClient).toHaveBeenCalledWith("base_url", { _internal: "deploy", token: "private_token" });
 
     // Verify that the file was read
     expect(fs.readFile).toHaveBeenCalledWith("/path/to/file", { encoding: "utf-8" });
