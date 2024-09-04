@@ -37,7 +37,7 @@ jobs:
 ## Inputs
 This action requires the following inputs:
 - *script_id* (required): The ID of the script you want to deploy. This can be stored securely as a GitHub secret (SCRIPT_ID).
-- *deploy_key*: The script deployment key used to authorize deployment. This should be stored securely as a GitHub secret (DEPLOY_KEY).
+- *deploy_key*: The script deployment key used to authorize deployment. This should be stored securely as a GitHub secret (DEPLOY_KEY). If this is not filled, we'll try to use the Github Application to deploy the script. You'll need to associate your repository within Bunny.
 - *file* (required): The script we are going to deploy.
 
 ## Setting Up Secrets
