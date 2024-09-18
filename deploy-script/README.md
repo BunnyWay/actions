@@ -27,7 +27,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy Script to Bunny Edge Scripting
-        uses: BunnyWay/actions/deploy-script@latest
+        uses: BunnyWay/actions/deploy-script@main
         with:
           script_id: ${{ secrets.SCRIPT_ID }}
           deploy_key: ${{ secrets.DEPLOY_KEY }}
