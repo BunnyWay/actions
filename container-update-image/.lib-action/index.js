@@ -24971,9 +24971,6 @@ function run() {
                     return;
                 }
                 appConfig.containerTemplates[index].imageTag = imageTag;
-                // If imageDigest is set, we need to remove it, because it seems to
-                // take presedence over imageTag.
-                delete appConfig.containerTemplates[index].imageDigest;
                 replaced = true;
             });
             if (replaced === false) {
@@ -24982,11 +24979,11 @@ function run() {
             yield saveAppConfiguration(token, appId, appConfig);
         }
         catch (e) {
-            if (typeof e === "string" || e instanceof Error) {
+            if (typeof e === 'string' || e instanceof Error) {
                 core.setFailed(e);
             }
             else {
-                core.setFailed("Unexpected error");
+                core.setFailed('Unexpected error');
             }
         }
     });
@@ -24994,36 +24991,35 @@ function run() {
 function exchangeApiKeyForToken(apiKey) {
     return __awaiter(this, void 0, void 0, function* () {
         return new Promise((resolve, reject) => {
-            fetch("https://api.bunny.net/apikey/exchange", {
-                method: "POST",
+            fetch('https://api.bunny.net/apikey/exchange', {
+                method: 'POST',
                 headers: {
-                    "Content-Type": "application/json",
-                    AccessKey: apiKey,
+                    'Content-Type': 'application/json',
+                    'AccessKey': apiKey,
                 },
                 body: JSON.stringify({ AccessKey: apiKey }),
             })
-                .then((response) => {
+                .then(response => {
                 if (response.status === 401) {
-                    reject("Invalid api_key.");
+                    reject('Invalid api_key.');
                     return;
                 }
                 if (response.status !== 200) {
                     reject(`Could not obtain access token: HTTP status ${response.status}.`);
                     return;
                 }
-                response
-                    .json()
-                    .then((obj) => {
+                response.json()
+                    .then(obj => {
                     resolve(obj.Token);
                 })
-                    .catch((e) => {
+                    .catch(e => {
                     console.log(e);
-                    reject("Could not parse JSON response.");
+                    reject('Could not parse JSON response.');
                 });
             })
-                .catch((e) => {
+                .catch(e => {
                 console.log(e);
-                reject("Could not obtain access token.");
+                reject('Could not obtain access token.');
             });
         });
     });
@@ -25032,13 +25028,13 @@ function getAppConfiguration(token, appId) {
     return __awaiter(this, void 0, void 0, function* () {
         return new Promise((resolve, reject) => {
             fetch(`https://api-mc.opsbunny.net/v1/namespaces/default/applications/${appId}/configuration`, {
-                method: "GET",
+                method: 'GET',
                 headers: {
-                    Accept: "application/json",
-                    Authorization: token,
+                    'Accept': 'application/json',
+                    'Authorization': token
                 },
             })
-                .then((response) => {
+                .then(response => {
                 if (response.status === 400) {
                     reject(`Could not obtain app configuration: Double-check your app_id.`);
                     return;
@@ -25047,19 +25043,18 @@ function getAppConfiguration(token, appId) {
                     reject(`Could not obtain app configuration: HTTP status ${response.status}.`);
                     return;
                 }
-                response
-                    .json()
-                    .then((obj) => {
+                response.json()
+                    .then(obj => {
                     resolve(obj);
                 })
-                    .catch((e) => {
+                    .catch(e => {
                     console.log(e);
-                    reject("Could not parse JSON response.");
+                    reject('Could not parse JSON response.');
                 });
             })
-                .catch((e) => {
+                .catch(e => {
                 console.log(e);
-                reject("Could not obtain app configuration.");
+                reject('Could not obtain app configuration.');
             });
         });
     });
@@ -25067,24 +25062,24 @@ function getAppConfiguration(token, appId) {
 function saveAppConfiguration(token, appId, appConfig) {
     return __awaiter(this, void 0, void 0, function* () {
         return new Promise((resolve, reject) => {
-            fetch("https://api-mc.opsbunny.net/v1/namespaces/default/applications", {
-                method: "PUT",
+            fetch('https://api-mc.opsbunny.net/v1/namespaces/default/applications', {
+                method: 'PUT',
                 headers: {
-                    "Content-Type": "application/json",
-                    Authorization: token,
+                    'Content-Type': 'application/json',
+                    'Authorization': token
                 },
                 body: JSON.stringify(appConfig),
             })
-                .then((response) => {
+                .then(response => {
                 if (response.status !== 200) {
                     reject(`Could not save app configuration: HTTP status ${response.status}.`);
                     return;
                 }
                 resolve();
             })
-                .catch((e) => {
+                .catch(e => {
                 console.log(e);
-                reject("Could not save app configuration.");
+                reject('Could not save app configuration.');
             });
         });
     });
