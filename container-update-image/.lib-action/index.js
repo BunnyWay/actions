@@ -24971,6 +24971,9 @@ function run() {
                     return;
                 }
                 appConfig.containerTemplates[index].imageTag = imageTag;
+                // If imageDigest is set, we need to remove it, because it seems to
+                // take presedence over imageTag.
+                delete appConfig.containerTemplates[index].imageDigest;
                 replaced = true;
             });
             if (replaced === false) {
