@@ -24962,6 +24962,7 @@ function run() {
         const appId = core.getInput("app_id", { required: true });
         const containerName = core.getInput("container", { required: true });
         const imageTag = core.getInput("image_tag", { required: true });
+        const imageDigest = core.getInput("image_digest");
         try {
             const appConfig = yield getAppConfiguration(apiKey, appId);
             const containers = appConfig.containerTemplates.filter(v => v.name === containerName);
@@ -24972,8 +24973,13 @@ function run() {
                 throw new Error(`Found more than one container named "${containerName}".`);
             }
             const containerId = containers[0].id;
-            console.log(`Updating container "${containerName}" (${containerId}) with tag "${imageTag}"`);
-            patchAppContainer(apiKey, appId, containerId, imageTag);
+            if (imageDigest === '') {
+                console.log(`Updating container "${containerName}" (${containerId}) with tag "${imageTag}"`);
+            }
+            else {
+                console.log(`Updating container "${containerName}" (${containerId}) with tag "${imageTag}", digest "${imageDigest}"`);
+            }
+            patchAppContainer(apiKey, appId, containerId, imageTag, imageDigest);
         }
         catch (e) {
             if (typeof e === 'string' || e instanceof Error) {
@@ -25020,8 +25026,15 @@ function getAppConfiguration(apiKey, appId) {
         });
     });
 }
-function patchAppContainer(apiKey, appId, containerId, imageTag) {
+function patchAppContainer(apiKey, appId, containerId, imageTag, imageDigest) {
     return __awaiter(this, void 0, void 0, function* () {
+        const body = {
+            id: containerId,
+            imageTag: imageTag,
+        };
+        if (imageDigest !== undefined && imageDigest.length > 0) {
+            body.imageDigest = imageDigest;
+        }
         return new Promise((resolve, reject) => {
             fetch(`https://api.bunny.net/mc/apps/${appId}/containers/${containerId}`, {
                 method: 'PATCH',
@@ -25029,10 +25042,7 @@ function patchAppContainer(apiKey, appId, containerId, imageTag) {
                     'Content-Type': 'application/json',
                     'AccessKey': apiKey,
                 },
-                body: JSON.stringify({
-                    id: containerId,
-                    imageTag: imageTag,
-                }),
+                body: JSON.stringify(body),
             })
                 .then(response => {
                 if (response.status !== 200) {

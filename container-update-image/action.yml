@@ -22,6 +22,10 @@ inputs:
     description: The new image.
     required: true
 
+  image_digest:
+    description: The digest of the new image.
+    required: false
+
 runs:
   using: 'node20'
   main: '.lib-action/index.js'

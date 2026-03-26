@@ -5,6 +5,7 @@ export async function run() {
   const appId = core.getInput("app_id", { required: true });
   const containerName = core.getInput("container", { required: true });
   const imageTag = core.getInput("image_tag", { required: true });
+  const imageDigest = core.getInput("image_digest");
 
   try {
     const appConfig = await getAppConfiguration(apiKey, appId);
@@ -19,9 +20,13 @@ export async function run() {
     }
 
     const containerId = containers[0].id;
-    console.log(`Updating container "${containerName}" (${containerId}) with tag "${imageTag}"`);
+    if (imageDigest === '') {
+      console.log(`Updating container "${containerName}" (${containerId}) with tag "${imageTag}"`);
+    } else {
+      console.log(`Updating container "${containerName}" (${containerId}) with tag "${imageTag}", digest "${imageDigest}"`);
+    }
 
-    patchAppContainer(apiKey, appId, containerId, imageTag);
+    patchAppContainer(apiKey, appId, containerId, imageTag, imageDigest);
   } catch (e) {
     if (typeof e === 'string' || e instanceof Error) {
       core.setFailed(e);
@@ -69,7 +74,22 @@ async function getAppConfiguration(apiKey: string, appId: string): Promise<AppCo
   });
 }
 
-async function patchAppContainer(apiKey: string, appId: string, containerId: string, imageTag: string): Promise<void> {
+type PatchBody = {
+  id: string;
+  imageTag: string;
+  imageDigest?: string;
+}
+
+async function patchAppContainer(apiKey: string, appId: string, containerId: string, imageTag: string, imageDigest?: string): Promise<void> {
+  const body : PatchBody = {
+    id: containerId,
+    imageTag: imageTag,
+  };
+
+  if (imageDigest !== undefined && imageDigest.length > 0) {
+    body.imageDigest = imageDigest;
+  }
+
   return new Promise((resolve, reject) => {
     fetch(`https://api.bunny.net/mc/apps/${appId}/containers/${containerId}`, {
       method: 'PATCH',
@@ -77,10 +97,7 @@ async function patchAppContainer(apiKey: string, appId: string, containerId: str
         'Content-Type': 'application/json',
         'AccessKey': apiKey,
       },
-      body: JSON.stringify({
-        id: containerId,
-        imageTag: imageTag,
-      }),
+      body: JSON.stringify(body),
     })
       .then(response => {
         if (response.status !== 200) {
