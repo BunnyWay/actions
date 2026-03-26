@@ -24960,26 +24960,20 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         const apiKey = core.getInput("api_key", { required: true });
         const appId = core.getInput("app_id", { required: true });
-        const container = core.getInput("container", { required: true });
+        const containerName = core.getInput("container", { required: true });
         const imageTag = core.getInput("image_tag", { required: true });
         try {
-            const token = yield exchangeApiKeyForToken(apiKey);
-            const appConfig = yield getAppConfiguration(token, appId);
-            let replaced = false;
-            appConfig.containerTemplates.forEach((value, index) => {
-                if (value.name !== container) {
-                    return;
-                }
-                appConfig.containerTemplates[index].imageTag = imageTag;
-                // If imageDigest is set, we need to remove it, because it seems to
-                // take presedence over imageTag.
-                delete appConfig.containerTemplates[index].imageDigest;
-                replaced = true;
-            });
-            if (replaced === false) {
-                throw new Error(`Could not find container "${container}".`);
+            const appConfig = yield getAppConfiguration(apiKey, appId);
+            const containers = appConfig.containerTemplates.filter(v => v.name === containerName);
+            if (containers.length === 0) {
+                throw new Error(`Could not find container named "${containerName}".`);
             }
-            yield saveAppConfiguration(token, appId, appConfig);
+            if (containers.length > 1) {
+                throw new Error(`Found more than one container named "${containerName}".`);
+            }
+            const containerId = containers[0].id;
+            console.log(`Updating container "${containerName}" (${containerId}) with tag "${imageTag}"`);
+            patchAppContainer(apiKey, appId, containerId, imageTag);
         }
         catch (e) {
             if (typeof e === 'string' || e instanceof Error) {
@@ -24991,50 +24985,14 @@ function run() {
         }
     });
 }
-function exchangeApiKeyForToken(apiKey) {
+function getAppConfiguration(apiKey, appId) {
     return __awaiter(this, void 0, void 0, function* () {
         return new Promise((resolve, reject) => {
-            fetch('https://api.bunny.net/apikey/exchange', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'AccessKey': apiKey,
-                },
-                body: JSON.stringify({ AccessKey: apiKey }),
-            })
-                .then(response => {
-                if (response.status === 401) {
-                    reject('Invalid api_key.');
-                    return;
-                }
-                if (response.status !== 200) {
-                    reject(`Could not obtain access token: HTTP status ${response.status}.`);
-                    return;
-                }
-                response.json()
-                    .then(obj => {
-                    resolve(obj.Token);
-                })
-                    .catch(e => {
-                    console.log(e);
-                    reject('Could not parse JSON response.');
-                });
-            })
-                .catch(e => {
-                console.log(e);
-                reject('Could not obtain access token.');
-            });
-        });
-    });
-}
-function getAppConfiguration(token, appId) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return new Promise((resolve, reject) => {
-            fetch(`https://api-mc.opsbunny.net/v1/namespaces/default/applications/${appId}/configuration`, {
+            fetch(`https://api.bunny.net/mc/apps/${appId}`, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'Authorization': token
+                    'AccessKey': apiKey
                 },
             })
                 .then(response => {
@@ -25062,27 +25020,30 @@ function getAppConfiguration(token, appId) {
         });
     });
 }
-function saveAppConfiguration(token, appId, appConfig) {
+function patchAppContainer(apiKey, appId, containerId, imageTag) {
     return __awaiter(this, void 0, void 0, function* () {
         return new Promise((resolve, reject) => {
-            fetch('https://api-mc.opsbunny.net/v1/namespaces/default/applications', {
-                method: 'PUT',
+            fetch(`https://api.bunny.net/mc/apps/${appId}/containers/${containerId}`, {
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': token
+                    'AccessKey': apiKey,
                 },
-                body: JSON.stringify(appConfig),
+                body: JSON.stringify({
+                    id: containerId,
+                    imageTag: imageTag,
+                }),
             })
                 .then(response => {
                 if (response.status !== 200) {
-                    reject(`Could not save app configuration: HTTP status ${response.status}.`);
+                    reject(`Could not save container configuration: HTTP status ${response.status}.`);
                     return;
                 }
                 resolve();
             })
                 .catch(e => {
-                console.log(e);
-                reject('Could not save app configuration.');
+                console.error(e);
+                reject('Could not save container configuration.');
             });
         });
     });

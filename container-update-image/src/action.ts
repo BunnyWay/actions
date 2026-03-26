@@ -3,30 +3,25 @@ import * as core from "@actions/core";
 export async function run() {
   const apiKey = core.getInput("api_key", { required: true });
   const appId = core.getInput("app_id", { required: true });
-  const container = core.getInput("container", { required: true });
+  const containerName = core.getInput("container", { required: true });
   const imageTag = core.getInput("image_tag", { required: true });
 
   try {
-    const token = await exchangeApiKeyForToken(apiKey);
-    const appConfig = await getAppConfiguration(token, appId);
+    const appConfig = await getAppConfiguration(apiKey, appId);
+    const containers = appConfig.containerTemplates.filter(v => v.name === containerName);
 
-    let replaced = false;
-    appConfig.containerTemplates.forEach((value, index) => {
-      if (value.name !== container) {
-        return;
-      }
-      appConfig.containerTemplates[index].imageTag = imageTag;
-      // If imageDigest is set, we need to remove it, because it seems to
-      // take presedence over imageTag.
-      delete appConfig.containerTemplates[index].imageDigest;
-      replaced = true;
-    });
-
-    if (replaced === false) {
-      throw new Error(`Could not find container "${container}".`);
+    if (containers.length === 0) {
+      throw new Error(`Could not find container named "${containerName}".`);
     }
 
-    await saveAppConfiguration(token, appId, appConfig);
+    if (containers.length > 1) {
+      throw new Error(`Found more than one container named "${containerName}".`);
+    }
+
+    const containerId = containers[0].id;
+    console.log(`Updating container "${containerName}" (${containerId}) with tag "${imageTag}"`);
+
+    patchAppContainer(apiKey, appId, containerId, imageTag);
   } catch (e) {
     if (typeof e === 'string' || e instanceof Error) {
       core.setFailed(e);
@@ -36,51 +31,13 @@ export async function run() {
   }
 }
 
-async function exchangeApiKeyForToken(apiKey: string): Promise<string> {
+async function getAppConfiguration(apiKey: string, appId: string): Promise<AppConfiguration> {
   return new Promise((resolve, reject) => {
-    fetch('https://api.bunny.net/apikey/exchange', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'AccessKey': apiKey,
-      },
-      body: JSON.stringify({ AccessKey: apiKey }),
-    })
-      .then(response => {
-        if (response.status === 401) {
-          reject('Invalid api_key.');
-          return;
-        }
-
-        if (response.status !== 200) {
-          reject(`Could not obtain access token: HTTP status ${response.status}.`);
-          return;
-        }
-
-        response.json()
-          .then(obj => {
-            resolve(obj.Token);
-          })
-          .catch(e => {
-            console.log(e);
-            reject('Could not parse JSON response.');
-          })
-        ;
-      })
-      .catch(e => {
-        console.log(e);
-        reject('Could not obtain access token.');
-      });
-  });
-}
-
-async function getAppConfiguration(token: string, appId: string): Promise<AppConfiguration> {
-  return new Promise((resolve, reject) => {
-    fetch(`https://api-mc.opsbunny.net/v1/namespaces/default/applications/${appId}/configuration`, {
+    fetch(`https://api.bunny.net/mc/apps/${appId}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
-        'Authorization': token
+        'AccessKey': apiKey
       },
     })
       .then(response => {
@@ -112,27 +69,30 @@ async function getAppConfiguration(token: string, appId: string): Promise<AppCon
   });
 }
 
-async function saveAppConfiguration(token: string, appId: string, appConfig: AppConfiguration): Promise<void> {
+async function patchAppContainer(apiKey: string, appId: string, containerId: string, imageTag: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    fetch('https://api-mc.opsbunny.net/v1/namespaces/default/applications', {
-      method: 'PUT',
+    fetch(`https://api.bunny.net/mc/apps/${appId}/containers/${containerId}`, {
+      method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': token
+        'AccessKey': apiKey,
       },
-      body: JSON.stringify(appConfig),
+      body: JSON.stringify({
+        id: containerId,
+        imageTag: imageTag,
+      }),
     })
       .then(response => {
         if (response.status !== 200) {
-          reject(`Could not save app configuration: HTTP status ${response.status}.`);
+          reject(`Could not save container configuration: HTTP status ${response.status}.`);
           return;
         }
 
         resolve();
       })
       .catch(e => {
-        console.log(e);
-        reject('Could not save app configuration.');
+        console.error(e);
+        reject('Could not save container configuration.');
       })
     ;
   });
@@ -141,8 +101,7 @@ async function saveAppConfiguration(token: string, appId: string, appConfig: App
 type AppConfiguration = {
   id: string;
   containerTemplates: Array<{
+    id: string;
     name: string;
-    imageTag: string;
-    imageDigest?: string;
   }>;
 }
