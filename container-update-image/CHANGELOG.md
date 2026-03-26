@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0
+
+### Minor Changes
+
+- 81ebe3c: Support image_digest
+- 04f370a: Use the MC Public API
+
 ## 0.1.2
 
 ### Patch Changes
