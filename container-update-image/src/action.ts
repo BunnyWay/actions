@@ -6,6 +6,7 @@ export async function run() {
   const containerName = core.getInput("container", { required: true });
   const imageTag = core.getInput("image_tag", { required: true });
   const imageDigest = core.getInput("image_digest");
+  const imageName = core.getInput("image_name");
 
   try {
     const appConfig = await getAppConfiguration(apiKey, appId);
@@ -26,7 +27,7 @@ export async function run() {
       console.log(`Updating container "${containerName}" (${containerId}) with tag "${imageTag}", digest "${imageDigest}"`);
     }
 
-    patchAppContainer(apiKey, appId, containerId, imageTag, imageDigest);
+    patchAppContainer(apiKey, appId, containerId, imageTag, imageDigest, imageName);
   } catch (e) {
     if (typeof e === 'string' || e instanceof Error) {
       core.setFailed(e);
@@ -78,13 +79,18 @@ type PatchBody = {
   id: string;
   imageTag: string;
   imageDigest?: string;
+  imageName?: string;
 }
 
-async function patchAppContainer(apiKey: string, appId: string, containerId: string, imageTag: string, imageDigest?: string): Promise<void> {
+async function patchAppContainer(apiKey: string, appId: string, containerId: string, imageTag: string, imageDigest?: string, imageName?: string): Promise<void> {
   const body : PatchBody = {
     id: containerId,
     imageTag: imageTag,
   };
+
+  if (imageName!== undefined && imageName.length > 0) {
+    body.imageName = imageName;
+  }
 
   if (imageDigest !== undefined && imageDigest.length > 0) {
     body.imageDigest = imageDigest;
