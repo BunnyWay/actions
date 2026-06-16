@@ -19,8 +19,12 @@ inputs:
     required: true
 
   image_tag:
-    description: The new image.
+    description: The new image tag.
     required: true
+
+  image_name:
+    description: The new image name.
+    required: false
 
   image_digest:
     description: The digest of the new image.
