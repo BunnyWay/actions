@@ -5,8 +5,8 @@ export async function run() {
   const appId = core.getInput("app_id", { required: true });
   const containerName = core.getInput("container", { required: true });
   const imageTag = core.getInput("image_tag", { required: true });
-  const imageDigest = core.getInput("image_digest");
   const imageName = core.getInput("image_name");
+  const imageDigest = core.getInput("image_digest");
 
   try {
     const appConfig = await getAppConfiguration(apiKey, appId);
@@ -21,13 +21,17 @@ export async function run() {
     }
 
     const containerId = containers[0].id;
-    if (imageDigest === '') {
-      console.log(`Updating container "${containerName}" (${containerId}) with tag "${imageTag}"`);
-    } else {
-      console.log(`Updating container "${containerName}" (${containerId}) with tag "${imageTag}", digest "${imageDigest}"`);
-    }
 
-    patchAppContainer(apiKey, appId, containerId, imageTag, imageDigest, imageName);
+    let message = `Updating container "${containerName}" (${containerId}) with tag "${imageTag}"`;
+    if (imageName !== '') {
+      message += `, name "${imageName}"`;
+    }
+    if (imageDigest !== '') {
+      message += `, digest "${imageDigest}"`;
+    }
+    console.log(message);
+
+    patchAppContainer(apiKey, appId, containerId, imageTag, imageName, imageDigest);
   } catch (e) {
     if (typeof e === 'string' || e instanceof Error) {
       core.setFailed(e);
@@ -82,7 +86,7 @@ type PatchBody = {
   imageName?: string;
 }
 
-async function patchAppContainer(apiKey: string, appId: string, containerId: string, imageTag: string, imageDigest?: string, imageName?: string): Promise<void> {
+async function patchAppContainer(apiKey: string, appId: string, containerId: string, imageTag: string, imageName?: string, imageDigest?: string): Promise<void> {
   const body : PatchBody = {
     id: containerId,
     imageTag: imageTag,

@@ -25699,6 +25699,7 @@ function run() {
         const appId = core.getInput("app_id", { required: true });
         const containerName = core.getInput("container", { required: true });
         const imageTag = core.getInput("image_tag", { required: true });
+        const imageName = core.getInput("image_name");
         const imageDigest = core.getInput("image_digest");
         try {
             const appConfig = yield getAppConfiguration(apiKey, appId);
@@ -25710,13 +25711,15 @@ function run() {
                 throw new Error(`Found more than one container named "${containerName}".`);
             }
             const containerId = containers[0].id;
-            if (imageDigest === '') {
-                console.log(`Updating container "${containerName}" (${containerId}) with tag "${imageTag}"`);
+            let message = `Updating container "${containerName}" (${containerId}) with tag "${imageTag}"`;
+            if (imageName !== '') {
+                message += `, name "${imageName}"`;
             }
-            else {
-                console.log(`Updating container "${containerName}" (${containerId}) with tag "${imageTag}", digest "${imageDigest}"`);
+            if (imageDigest !== '') {
+                message += `, digest "${imageDigest}"`;
             }
-            patchAppContainer(apiKey, appId, containerId, imageTag, imageDigest);
+            console.log(message);
+            patchAppContainer(apiKey, appId, containerId, imageTag, imageName, imageDigest);
         }
         catch (e) {
             if (typeof e === 'string' || e instanceof Error) {
@@ -25763,12 +25766,15 @@ function getAppConfiguration(apiKey, appId) {
         });
     });
 }
-function patchAppContainer(apiKey, appId, containerId, imageTag, imageDigest) {
+function patchAppContainer(apiKey, appId, containerId, imageTag, imageName, imageDigest) {
     return __awaiter(this, void 0, void 0, function* () {
         const body = {
             id: containerId,
             imageTag: imageTag,
         };
+        if (imageName !== undefined && imageName.length > 0) {
+            body.imageName = imageName;
+        }
         if (imageDigest !== undefined && imageDigest.length > 0) {
             body.imageDigest = imageDigest;
         }

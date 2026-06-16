@@ -52,4 +52,5 @@ This action requires the following inputs:
 - *api_key* (required): The [API Key](https://dash.bunny.net/account/api-key) for your Bunny account. Team accounts are not supported at the moment;
 - *container* (required): The name of the container within the Magic Containers App;
 - *image_tag* (required): The new image tag;
+- *image_name* (optional): The name of new image;
 - *image_digest* (optional): The digest of new image;
