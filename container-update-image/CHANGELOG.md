@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+### Patch Changes
+
+- 7a2c8d7: Support image_name
+
 ## 0.2.1
 
 ### Patch Changes
