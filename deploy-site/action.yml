@@ -1,0 +1,52 @@
+name: Deploy Site to Bunny
+author: Bunny Devs
+description: Deploy a static site to bunny.net with preview URLs per deploy.
+
+inputs:
+  site:
+    description: Site name or storage zone ID.
+    required: true
+  directory:
+    description: Built output directory to deploy (e.g. dist).
+    required: true
+  api_key:
+    description: bunny.net API key (store it as a repository secret).
+    required: true
+  production:
+    description: Publish this deploy as the live site ("true"/"false", default preview only).
+    required: false
+    default: "false"
+  comment:
+    description: Upsert a sticky PR comment with the preview URL on pull_request events.
+    required: false
+    default: "true"
+  github_token:
+    description: Token for the PR comment (needs pull-requests write).
+    required: false
+    default: ${{ github.token }}
+  cli_version:
+    description: "@bunny.net/cli version range to run (pin bumped per action release)."
+    required: false
+    default: "0.10"
+  force:
+    description: Redeploy even when content is unchanged.
+    required: false
+    default: "false"
+
+outputs:
+  deploy-id:
+    description: The deploy ID (git short sha on clean checkouts).
+  preview-url:
+    description: Preview URL for this deploy (empty when the site has no host yet).
+  production-url:
+    description: Production URL (set when production input was true).
+  unchanged:
+    description: '"true" when the content was already deployed and nothing ran.'
+
+runs:
+  using: "node24"
+  main: ".lib-action/index.js"
+
+branding:
+  color: "orange"
+  icon: "upload-cloud"
