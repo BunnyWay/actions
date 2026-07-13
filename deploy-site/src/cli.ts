@@ -71,7 +71,10 @@ export type DeployRun = {
 
 // A non-zero exit is returned, not thrown, so the caller can surface the
 // stderr tail.
-export async function runDeploy(opts: DeployArgs, apiKey: string): Promise<DeployRun> {
+export async function runDeploy(
+  opts: DeployArgs,
+  apiKey: string,
+): Promise<DeployRun> {
   const args = buildDeployArgs(opts);
 
   let stdout = "";
@@ -124,9 +127,5 @@ export function parseDeployOutput(stdout: string): DeployOutput {
 }
 
 export function lastLines(text: string, n: number): string {
-  return text
-    .trimEnd()
-    .split("\n")
-    .slice(-n)
-    .join("\n");
+  return text.trimEnd().split("\n").slice(-n).join("\n");
 }

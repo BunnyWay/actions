@@ -43,8 +43,12 @@ type Inputs = Record<string, string>;
 type Bools = Record<string, boolean>;
 
 function setInputs(inputs: Inputs, bools: Bools) {
-  (core.getInput as jest.Mock).mockImplementation((name: unknown) => inputs[name as string] ?? "");
-  (core.getBooleanInput as jest.Mock).mockImplementation((name: unknown) => bools[name as string] ?? false);
+  (core.getInput as jest.Mock).mockImplementation(
+    (name: unknown) => inputs[name as string] ?? "",
+  );
+  (core.getBooleanInput as jest.Mock).mockImplementation(
+    (name: unknown) => bools[name as string] ?? false,
+  );
 }
 
 describe("action run", () => {
@@ -76,15 +80,24 @@ describe("action run", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (core as any).summary = summary;
 
-    (cli.runDeploy as jest.Mock).mockResolvedValue({ exitCode: 0, stdout: "{}", stderr: "" } as never);
+    (cli.runDeploy as jest.Mock).mockResolvedValue({
+      exitCode: 0,
+      stdout: "{}",
+      stderr: "",
+    } as never);
     (cli.parseDeployOutput as jest.Mock).mockReturnValue(DEPLOYED);
     (cli.isUnchanged as unknown as jest.Mock).mockImplementation(
       (o: unknown) => (o as { unchanged?: boolean }).unchanged === true,
     );
     (cli.lastLines as jest.Mock).mockImplementation((t: unknown, n: unknown) =>
-      String(t).split("\n").slice(-(n as number)).join("\n"),
+      String(t)
+        .split("\n")
+        .slice(-(n as number))
+        .join("\n"),
     );
-    (comment.upsertPreviewComment as jest.Mock).mockResolvedValue(undefined as never);
+    (comment.upsertPreviewComment as jest.Mock).mockResolvedValue(
+      undefined as never,
+    );
   });
 
   test("masks the api key and deploys, setting the four outputs", async () => {
@@ -92,11 +105,20 @@ describe("action run", () => {
 
     expect(core.setSecret).toHaveBeenCalledWith("secret-key");
     expect(cli.runDeploy).toHaveBeenCalledWith(
-      { cliVersion: "0.10", directory: "dist", site: "my-site", production: false, force: false },
+      {
+        cliVersion: "0.10",
+        directory: "dist",
+        site: "my-site",
+        production: false,
+        force: false,
+      },
       "secret-key",
     );
     expect(core.setOutput).toHaveBeenCalledWith("deploy-id", "a1b2c3d4");
-    expect(core.setOutput).toHaveBeenCalledWith("preview-url", DEPLOYED.preview);
+    expect(core.setOutput).toHaveBeenCalledWith(
+      "preview-url",
+      DEPLOYED.preview,
+    );
     expect(core.setOutput).toHaveBeenCalledWith("production-url", "");
     expect(core.setOutput).toHaveBeenCalledWith("unchanged", "false");
     expect(core.setFailed).not.toHaveBeenCalled();
@@ -107,7 +129,9 @@ describe("action run", () => {
 
     await run();
 
-    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining("does not exist"));
+    expect(core.setFailed).toHaveBeenCalledWith(
+      expect.stringContaining("does not exist"),
+    );
     expect(cli.runDeploy).not.toHaveBeenCalled();
   });
 
@@ -122,7 +146,9 @@ describe("action run", () => {
 
     await run();
 
-    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining("boom: deploy failed"));
+    expect(core.setFailed).toHaveBeenCalledWith(
+      expect.stringContaining("boom: deploy failed"),
+    );
     expect(comment.upsertPreviewComment).not.toHaveBeenCalled();
   });
 
@@ -133,7 +159,8 @@ describe("action run", () => {
     await run();
 
     expect(comment.upsertPreviewComment).toHaveBeenCalledTimes(1);
-    const [, ctxArg, inputArg] = (comment.upsertPreviewComment as jest.Mock).mock.calls[0] as [
+    const [, ctxArg, inputArg] = (comment.upsertPreviewComment as jest.Mock)
+      .mock.calls[0] as [
       unknown,
       { owner: string; repo: string; issueNumber: number },
       { site: string; previewUrl: string },
@@ -155,7 +182,13 @@ describe("action run", () => {
     context.eventName = "pull_request";
     context.payload = { pull_request: { number: 42 } };
     setInputs(
-      { site: "my-site", directory: "dist", api_key: "secret-key", github_token: "gh-token", cli_version: "0.10" },
+      {
+        site: "my-site",
+        directory: "dist",
+        api_key: "secret-key",
+        github_token: "gh-token",
+        cli_version: "0.10",
+      },
       { production: false, comment: false, force: false },
     );
 
@@ -185,7 +218,13 @@ describe("action run", () => {
 
   test("passes --production/--force through to the CLI when requested", async () => {
     setInputs(
-      { site: "my-site", directory: "dist", api_key: "secret-key", github_token: "gh-token", cli_version: "0.10" },
+      {
+        site: "my-site",
+        directory: "dist",
+        api_key: "secret-key",
+        github_token: "gh-token",
+        cli_version: "0.10",
+      },
       { production: true, comment: true, force: true },
     );
 
@@ -200,11 +239,15 @@ describe("action run", () => {
   test("a comment failure is a warning, not a job failure", async () => {
     context.eventName = "pull_request";
     context.payload = { pull_request: { number: 42 } };
-    (comment.upsertPreviewComment as jest.Mock).mockRejectedValue(new Error("api down") as never);
+    (comment.upsertPreviewComment as jest.Mock).mockRejectedValue(
+      new Error("api down") as never,
+    );
 
     await run();
 
-    expect(core.warning).toHaveBeenCalledWith(expect.stringContaining("api down"));
+    expect(core.warning).toHaveBeenCalledWith(
+      expect.stringContaining("api down"),
+    );
     expect(core.setFailed).not.toHaveBeenCalled();
   });
 });

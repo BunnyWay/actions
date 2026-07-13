@@ -34,7 +34,9 @@ describe("buildDeployArgs", () => {
   });
 
   test("adds --production only when production is true", () => {
-    expect(buildDeployArgs({ ...base, production: true })).toContain("--production");
+    expect(buildDeployArgs({ ...base, production: true })).toContain(
+      "--production",
+    );
     expect(buildDeployArgs(base)).not.toContain("--production");
   });
 
@@ -81,7 +83,8 @@ describe("parseDeployOutput", () => {
   });
 
   test("tolerates leading noise before the first {", () => {
-    const noisy = 'some progress line\n{"site":"s","id":"i","preview":null,"production":null}';
+    const noisy =
+      'some progress line\n{"site":"s","id":"i","preview":null,"production":null}';
     const out = parseDeployOutput(noisy);
     expect(out.site).toBe("s");
   });
@@ -119,7 +122,13 @@ describe("runDeploy", () => {
     );
 
     const result = await runDeploy(
-      { cliVersion: "0.10", directory: "dist", site: "my-site", production: true, force: false },
+      {
+        cliVersion: "0.10",
+        directory: "dist",
+        site: "my-site",
+        production: true,
+        force: false,
+      },
       "secret-key",
     );
 
@@ -140,7 +149,13 @@ describe("runDeploy", () => {
     (exec.exec as jest.Mock).mockResolvedValue(1 as never);
 
     const result = await runDeploy(
-      { cliVersion: "0.10", directory: "dist", site: "my-site", production: false, force: false },
+      {
+        cliVersion: "0.10",
+        directory: "dist",
+        site: "my-site",
+        production: false,
+        force: false,
+      },
       "secret-key",
     );
 

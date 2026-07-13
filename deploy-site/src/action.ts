@@ -29,7 +29,9 @@ export async function run() {
     }
 
     if (!fs.existsSync(directory)) {
-      core.setFailed(`Directory "${directory}" does not exist. Build your site before deploying.`);
+      core.setFailed(
+        `Directory "${directory}" does not exist. Build your site before deploying.`,
+      );
       return;
     }
 
@@ -63,7 +65,11 @@ export async function run() {
 
     // Comment only on pull_request events, when enabled, and when a preview URL
     // exists (the site may have no hostname yet).
-    if (comment && github.context.eventName === "pull_request" && previewUrl !== "") {
+    if (
+      comment &&
+      github.context.eventName === "pull_request" &&
+      previewUrl !== ""
+    ) {
       await postComment(githubToken, site, output.id, previewUrl);
     }
   } catch (error: unknown) {
@@ -82,7 +88,9 @@ async function postComment(
   try {
     const issueNumber = github.context.payload.pull_request?.number;
     if (issueNumber === undefined) {
-      core.warning("No pull request number in context; skipping preview comment.");
+      core.warning(
+        "No pull request number in context; skipping preview comment.",
+      );
       return;
     }
 
@@ -107,6 +115,8 @@ async function postComment(
       },
     );
   } catch (error: unknown) {
-    core.warning(`Could not upsert preview comment: ${(error as Error).message}`);
+    core.warning(
+      `Could not upsert preview comment: ${(error as Error).message}`,
+    );
   }
 }

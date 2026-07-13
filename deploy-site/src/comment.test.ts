@@ -14,7 +14,9 @@ describe("marker", () => {
 
 describe("formatUpdated", () => {
   test("formats as YYYY-MM-DD HH:MM UTC", () => {
-    expect(formatUpdated(new Date("2026-07-13T14:02:31.000Z"))).toBe("2026-07-13 14:02 UTC");
+    expect(formatUpdated(new Date("2026-07-13T14:02:31.000Z"))).toBe(
+      "2026-07-13 14:02 UTC",
+    );
   });
 });
 
@@ -50,7 +52,9 @@ describe("upsertPreviewComment", () => {
     const listComments = jest.fn();
     const updateComment = jest.fn();
     const createComment = jest.fn();
-    const paginate = jest.fn<() => Promise<typeof existing>>().mockResolvedValue(existing);
+    const paginate = jest
+      .fn<() => Promise<typeof existing>>()
+      .mockResolvedValue(existing);
 
     return {
       octokit: {
@@ -73,7 +77,10 @@ describe("upsertPreviewComment", () => {
 
     expect(createComment).toHaveBeenCalledTimes(1);
     expect(updateComment).not.toHaveBeenCalled();
-    const arg = createComment.mock.calls[0][0] as { issue_number: number; body: string };
+    const arg = createComment.mock.calls[0][0] as {
+      issue_number: number;
+      body: string;
+    };
     expect(arg.issue_number).toBe(42);
     expect(arg.body.startsWith("<!-- bunny-sites:my-site -->")).toBe(true);
   });
