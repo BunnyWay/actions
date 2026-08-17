@@ -1,5 +1,11 @@
 # deploy-script
 
+## 0.5.1
+
+### Patch Changes
+
+- 4e39c28: Upgrade the action runtime to node24 and update dependencies
+
 ## 0.5.0
 
 ### Minor Changes

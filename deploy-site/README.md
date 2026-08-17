@@ -62,17 +62,40 @@ commands and output directories.
 | `production`   | no       | `"false"`             | Publish this deploy as the live site (`"true"`/`"false"`, default preview only). |
 | `comment`      | no       | `"true"`              | Upsert a sticky PR comment with the preview URL on `pull_request` events.        |
 | `github_token` | no       | `${{ github.token }}` | Token for the PR comment (needs `pull-requests: write`).                         |
-| `cli_version`  | no       | `"0.10"`              | `@bunny.net/cli` version range to run (pin bumped per action release).           |
+| `cli_version`  | no       | `"0.13"`              | `@bunny.net/cli` version range to run (pin bumped per action release).           |
 | `force`        | no       | `"false"`             | Redeploy even when content is unchanged.                                         |
+
+The action always passes `site` explicitly (as `--site`) so CI never depends on
+a `.bunny/site.json` manifest or `bunny.jsonc` being checked in, and it expects
+`directory` to already be built: run your build as a previous workflow step
+(the CLI's `deploy --build` convenience is for local use).
 
 ## Outputs
 
-| Output           | Description                                                        |
-| ---------------- | ------------------------------------------------------------------ |
-| `deploy-id`      | The deploy ID (git short sha on clean checkouts).                  |
-| `preview-url`    | Preview URL for this deploy (empty when the site has no host yet). |
-| `production-url` | Production URL (set when `production` input was `true`).           |
-| `unchanged`      | `"true"` when the content was already deployed and nothing ran.    |
+| Output           | Description                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------------- |
+| `deploy-id`      | The deploy ID (git short sha on clean checkouts, else a content hash).                                   |
+| `preview-url`    | Immutable preview URL for this deploy (empty when the preview zone is not ready yet).                    |
+| `production-url` | The site's live URL (custom domain, else its b-cdn.net host; empty when the site has neither).           |
+| `promoted`       | `"true"` when this deploy is the live production deploy — use this rather than assuming `production` decided it. |
+| `unchanged`      | `"true"` when the content was already deployed and nothing was uploaded.                                 |
+
+## How deploys behave
+
+- **Every deploy gets its own preview URL** (`https://sites-dpl-<id>-<suffix>.b-cdn.net`):
+  root-served on its own host with HTTPS out of the box, so client-side routers
+  and root-absolute assets behave exactly as in production. Previews never need
+  a custom domain, and preview responses carry `X-Robots-Tag: noindex`.
+- **Publishing is explicit**: previews are the default, and `production: true`
+  publishes the deploy as the live site. Promoting is instant — it flips a
+  router variable and purges the cache; no files move.
+- **Deploys are immutable and content-addressed**: the deploy ID is the git
+  short sha when the checkout is clean, otherwise an 8-char content hash.
+  Re-deploying identical content is a no-op (the `unchanged` output is
+  `"true"`); set `force: true` to redeploy anyway. Dotfiles and `node_modules`
+  are never uploaded.
+- **Rollbacks** don't need this action: `bunny sites deployments publish
+  --previous --force` flips production back instantly.
 
 ## Setting up the API key
 

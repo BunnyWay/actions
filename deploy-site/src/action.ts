@@ -51,15 +51,21 @@ export async function run() {
     const previewUrl = output.preview ?? "";
     const productionUrl = output.production ?? "";
     const unchanged = cli.isUnchanged(output);
+    // Whether this deploy is the live production deploy. The CLI reports it
+    // (`promoted` on a fresh deploy, `live` on a no-op), so trust that rather
+    // than assuming the `production` input decided it.
+    const promoted = unchanged ? output.live : output.promoted;
 
     core.setOutput("deploy-id", output.id);
     core.setOutput("preview-url", previewUrl);
     core.setOutput("production-url", productionUrl);
+    core.setOutput("promoted", promoted ? "true" : "false");
     core.setOutput("unchanged", unchanged ? "true" : "false");
 
+    const liveNote = promoted && productionUrl ? `, live at ${productionUrl}` : "";
     const summary = unchanged
-      ? `bunny.net: \`${site}\` already up to date (deploy \`${output.id}\`).`
-      : `bunny.net: deployed \`${site}\` (deploy \`${output.id}\`)${previewUrl ? `, preview ${previewUrl}` : ""}.`;
+      ? `bunny.net: \`${site}\` already up to date (deploy \`${output.id}\`)${liveNote}.`
+      : `bunny.net: deployed \`${site}\` (deploy \`${output.id}\`)${previewUrl ? `, preview ${previewUrl}` : ""}${liveNote}.`;
     core.info(summary);
     await core.summary.addRaw(summary).addEOL().write();
 

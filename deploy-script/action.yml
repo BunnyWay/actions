@@ -25,7 +25,7 @@ inputs:
     default: "https://api.bunny.net"
 
 runs:
-  using: "node20"
+  using: "node24"
   main: ".lib-action/index.js"
 
 branding:
