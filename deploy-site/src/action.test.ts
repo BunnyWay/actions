@@ -64,7 +64,7 @@ describe("action run", () => {
         directory: "dist",
         api_key: "secret-key",
         github_token: "gh-token",
-        cli_version: "0.10",
+        cli_version: "0.13",
       },
       { production: false, comment: true, force: false },
     );
@@ -100,13 +100,13 @@ describe("action run", () => {
     );
   });
 
-  test("masks the api key and deploys, setting the four outputs", async () => {
+  test("masks the api key and deploys, setting the five outputs", async () => {
     await run();
 
     expect(core.setSecret).toHaveBeenCalledWith("secret-key");
     expect(cli.runDeploy).toHaveBeenCalledWith(
       {
-        cliVersion: "0.10",
+        cliVersion: "0.13",
         directory: "dist",
         site: "my-site",
         production: false,
@@ -120,8 +120,43 @@ describe("action run", () => {
       DEPLOYED.preview,
     );
     expect(core.setOutput).toHaveBeenCalledWith("production-url", "");
+    expect(core.setOutput).toHaveBeenCalledWith("promoted", "false");
     expect(core.setOutput).toHaveBeenCalledWith("unchanged", "false");
     expect(core.setFailed).not.toHaveBeenCalled();
+  });
+
+  test("promoted comes from the CLI output, not the production input", async () => {
+    // The CLI reports what actually went live: a fresh deploy carries
+    // `promoted`, a no-op carries `live`.
+    (cli.parseDeployOutput as jest.Mock).mockReturnValue({
+      ...DEPLOYED,
+      promoted: true,
+      production: "https://example.com",
+    });
+
+    await run();
+
+    expect(core.setOutput).toHaveBeenCalledWith("promoted", "true");
+    expect(core.setOutput).toHaveBeenCalledWith(
+      "production-url",
+      "https://example.com",
+    );
+  });
+
+  test("an unchanged deploy that is already live reports promoted", async () => {
+    (cli.parseDeployOutput as jest.Mock).mockReturnValue({
+      site: "my-site",
+      id: "a1b2c3d4",
+      unchanged: true,
+      live: true,
+      production: "https://my-site.b-cdn.net",
+      preview: null,
+    });
+
+    await run();
+
+    expect(core.setOutput).toHaveBeenCalledWith("promoted", "true");
+    expect(core.setOutput).toHaveBeenCalledWith("unchanged", "true");
   });
 
   test("fails early when the directory is missing, without deploying", async () => {
@@ -187,7 +222,7 @@ describe("action run", () => {
         directory: "dist",
         api_key: "secret-key",
         github_token: "gh-token",
-        cli_version: "0.10",
+        cli_version: "0.13",
       },
       { production: false, comment: false, force: false },
     );
@@ -223,7 +258,7 @@ describe("action run", () => {
         directory: "dist",
         api_key: "secret-key",
         github_token: "gh-token",
-        cli_version: "0.10",
+        cli_version: "0.13",
       },
       { production: true, comment: true, force: true },
     );

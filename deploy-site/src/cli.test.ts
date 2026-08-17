@@ -12,7 +12,7 @@ jest.mock("@actions/exec");
 
 describe("buildDeployArgs", () => {
   const base = {
-    cliVersion: "0.10",
+    cliVersion: "0.13",
     directory: "dist",
     site: "my-site",
     production: false,
@@ -22,7 +22,7 @@ describe("buildDeployArgs", () => {
   test("builds the minimal preview argv", () => {
     expect(buildDeployArgs(base)).toEqual([
       "--yes",
-      "@bunny.net/cli@0.10",
+      "@bunny.net/cli@0.13",
       "sites",
       "deploy",
       "dist",
@@ -123,7 +123,7 @@ describe("runDeploy", () => {
 
     const result = await runDeploy(
       {
-        cliVersion: "0.10",
+        cliVersion: "0.13",
         directory: "dist",
         site: "my-site",
         production: true,
@@ -150,7 +150,7 @@ describe("runDeploy", () => {
 
     const result = await runDeploy(
       {
-        cliVersion: "0.10",
+        cliVersion: "0.13",
         directory: "dist",
         site: "my-site",
         production: false,

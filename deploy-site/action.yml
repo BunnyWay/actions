@@ -27,7 +27,7 @@ inputs:
   cli_version:
     description: "@bunny.net/cli version range to run (pin bumped per action release)."
     required: false
-    default: "0.10"
+    default: "0.13"
   force:
     description: Redeploy even when content is unchanged.
     required: false
@@ -35,13 +35,15 @@ inputs:
 
 outputs:
   deploy-id:
-    description: The deploy ID (git short sha on clean checkouts).
+    description: The deploy ID (git short sha on clean checkouts, else a content hash).
   preview-url:
-    description: Preview URL for this deploy (empty when the site has no host yet).
+    description: Immutable preview URL for this deploy (empty when the preview zone is not ready yet).
   production-url:
-    description: Production URL (set when production input was true).
+    description: The site's live URL (custom domain, else its b-cdn.net host; empty when the site has neither).
+  promoted:
+    description: '"true" when this deploy is the live production deploy (use this rather than assuming the production input decided it).'
   unchanged:
-    description: '"true" when the content was already deployed and nothing ran.'
+    description: '"true" when the content was already deployed and nothing was uploaded.'
 
 runs:
   using: "node24"

@@ -3,6 +3,9 @@ import * as exec from "@actions/exec";
 // Wraps the `@bunny.net/cli` `sites deploy` command. This is the only deploy
 // path; the action never talks to the bunny API directly.
 
+// The two `sites deploy --output json` payloads (verified against
+// @bunny.net/cli 0.13): a fresh deploy, and the no-op taken when the content
+// is already uploaded.
 export type DeployedOutput = {
   site: string;
   id: string;
