@@ -15,7 +15,7 @@ jest.mock("./comment");
 // A mutable context we can reshape per test.
 const context = {
   eventName: "push",
-  payload: {} as { pull_request?: { number: number } },
+  payload: {} as { action?: string; pull_request?: { number: number } },
   repo: { owner: "acme", repo: "web" },
 };
 
@@ -66,7 +66,7 @@ describe("action run", () => {
         github_token: "gh-token",
         cli_version: "0.13",
       },
-      { production: false, comment: true, force: false },
+      { production: false, comment: true, force: false, cleanup: true },
     );
 
     (fs.existsSync as jest.Mock).mockReturnValue(true);
@@ -98,6 +98,26 @@ describe("action run", () => {
     (comment.upsertPreviewComment as jest.Mock).mockResolvedValue(
       undefined as never,
     );
+
+    (comment.findPreviewComment as jest.Mock).mockResolvedValue({
+      id: 7,
+      body: "<!-- bunny-sites:my-site -->\n<!-- bunny-sites-deploy:a1b2c3d4 -->\nbody",
+    } as never);
+    (comment.parseDeployId as jest.Mock).mockReturnValue("a1b2c3d4");
+    (comment.buildCleanupCommentBody as jest.Mock).mockReturnValue(
+      "cleanup body",
+    );
+    (comment.upsertComment as jest.Mock).mockResolvedValue(undefined as never);
+    (cli.runDelete as jest.Mock).mockResolvedValue({
+      exitCode: 0,
+      stdout: "{}",
+      stderr: "",
+    } as never);
+    (cli.parseDeleteOutput as jest.Mock).mockReturnValue({
+      site: "my-site",
+      id: "a1b2c3d4",
+      deleted: true,
+    });
   });
 
   test("masks the api key and deploys, setting the five outputs", async () => {
@@ -269,6 +289,79 @@ describe("action run", () => {
       expect.objectContaining({ production: true, force: true }),
       "secret-key",
     );
+  });
+
+  describe("closed PR cleanup", () => {
+    beforeEach(() => {
+      context.eventName = "pull_request";
+      context.payload = { action: "closed", pull_request: { number: 42 } };
+    });
+
+    test("deletes the recorded preview deploy instead of deploying", async () => {
+      await run();
+
+      expect(cli.runDeploy).not.toHaveBeenCalled();
+      expect(cli.runDelete).toHaveBeenCalledWith(
+        { cliVersion: "0.13", site: "my-site", id: "a1b2c3d4" },
+        "secret-key",
+      );
+      expect(core.setOutput).toHaveBeenCalledWith("deleted", "true");
+      expect(comment.upsertComment).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ issueNumber: 42 }),
+        "my-site",
+        "cleanup body",
+      );
+      expect(core.setFailed).not.toHaveBeenCalled();
+    });
+
+    test("does nothing when cleanup input is false", async () => {
+      setInputs(
+        {
+          site: "my-site",
+          directory: "dist",
+          api_key: "secret-key",
+          github_token: "gh-token",
+          cli_version: "0.13",
+        },
+        { production: false, comment: true, force: false, cleanup: false },
+      );
+
+      await run();
+
+      expect(cli.runDelete).not.toHaveBeenCalled();
+      expect(cli.runDeploy).not.toHaveBeenCalled();
+      expect(core.setFailed).not.toHaveBeenCalled();
+    });
+
+    test("skips when no preview is recorded on the PR", async () => {
+      (comment.findPreviewComment as jest.Mock).mockResolvedValue(
+        undefined as never,
+      );
+
+      await run();
+
+      expect(cli.runDelete).not.toHaveBeenCalled();
+      expect(core.setOutput).toHaveBeenCalledWith("deleted", "false");
+      expect(core.setFailed).not.toHaveBeenCalled();
+    });
+
+    test("a failed delete is a warning, never a job failure", async () => {
+      (cli.runDelete as jest.Mock).mockResolvedValue({
+        exitCode: 1,
+        stdout: "",
+        stderr: "boom: is the live production deploy",
+      } as never);
+
+      await run();
+
+      expect(core.warning).toHaveBeenCalledWith(
+        expect.stringContaining("boom: is the live production deploy"),
+      );
+      expect(core.setOutput).toHaveBeenCalledWith("deleted", "false");
+      expect(comment.upsertComment).not.toHaveBeenCalled();
+      expect(core.setFailed).not.toHaveBeenCalled();
+    });
   });
 
   test("a comment failure is a warning, not a job failure", async () => {

@@ -2,7 +2,13 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import * as fs from "fs";
 import * as cli from "./cli";
-import { upsertPreviewComment } from "./comment";
+import {
+  buildCleanupCommentBody,
+  findPreviewComment,
+  parseDeployId,
+  upsertComment,
+  upsertPreviewComment,
+} from "./comment";
 
 export async function run() {
   try {
@@ -11,6 +17,7 @@ export async function run() {
     const apiKey = core.getInput("api_key", { required: true });
     const production = core.getBooleanInput("production");
     const comment = core.getBooleanInput("comment");
+    const cleanup = core.getBooleanInput("cleanup");
     const githubToken = core.getInput("github_token");
     const cliVersion = core.getInput("cli_version");
     const force = core.getBooleanInput("force");
@@ -20,6 +27,21 @@ export async function run() {
 
     if (site.trim() === "") {
       core.setFailed("Input `site` must not be empty.");
+      return;
+    }
+
+    // A closed PR is a cleanup run, not a deploy: delete the preview deploy
+    // recorded in the sticky comment. Branches before the directory checks,
+    // since nothing was built on this event.
+    if (
+      github.context.eventName === "pull_request" &&
+      github.context.payload.action === "closed"
+    ) {
+      if (!cleanup) {
+        core.info("PR closed and `cleanup` is false; nothing to do.");
+        return;
+      }
+      await cleanupPreview(githubToken, site, cliVersion, apiKey);
       return;
     }
 
@@ -80,6 +102,81 @@ export async function run() {
     }
   } catch (error: unknown) {
     core.setFailed((error as Error).message);
+  }
+}
+
+// Cleanup never fails the job: a red run on a closed PR blocks nothing, and a
+// leaked preview is exactly what `sites deployments prune` catches later. The
+// CLI refuses to delete the live or rollback deploy (a fast-forward merge can
+// promote the preview's own id), which surfaces here as a warning too.
+async function cleanupPreview(
+  githubToken: string,
+  site: string,
+  cliVersion: string,
+  apiKey: string,
+): Promise<void> {
+  try {
+    const issueNumber = github.context.payload.pull_request?.number;
+    if (issueNumber === undefined) {
+      core.warning("No pull request number in context; skipping cleanup.");
+      return;
+    }
+    if (githubToken === "") {
+      core.warning("No github_token provided; skipping cleanup.");
+      return;
+    }
+
+    const octokit = github.getOctokit(githubToken);
+    const ctx = {
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+      issueNumber,
+    };
+
+    // The sticky comment is the record of the last preview's deploy id; the
+    // id can't be recomputed here (PR runs deploy the merge-ref checkout).
+    const existing = await findPreviewComment(octokit, ctx, site);
+    const deployId = existing && parseDeployId(existing.body);
+    if (!deployId) {
+      core.info("No preview recorded on this PR; nothing to clean up.");
+      core.setOutput("deleted", "false");
+      return;
+    }
+
+    const result = await cli.runDelete(
+      { cliVersion, site, id: deployId },
+      apiKey,
+    );
+    if (result.exitCode !== 0) {
+      const tail = cli.lastLines(result.stderr, 10);
+      core.warning(
+        `Couldn't delete preview deploy ${deployId} (exit ${result.exitCode}); \`sites deployments prune\` will catch it.\n${tail}`,
+      );
+      core.setOutput("deleted", "false");
+      return;
+    }
+
+    const output = cli.parseDeleteOutput(result.stdout);
+    core.setOutput("deploy-id", output.id);
+    core.setOutput("deleted", output.deleted ? "true" : "false");
+
+    const summary = output.deleted
+      ? `bunny.net: deleted preview deploy \`${output.id}\` of \`${site}\`.`
+      : `bunny.net: preview deploy \`${output.id}\` of \`${site}\` was already gone.`;
+    core.info(summary);
+    await core.summary.addRaw(summary).addEOL().write();
+
+    if (output.deleted) {
+      await upsertComment(
+        octokit,
+        ctx,
+        site,
+        buildCleanupCommentBody(site, output.id, new Date()),
+      );
+    }
+  } catch (error: unknown) {
+    core.warning(`Preview cleanup failed: ${(error as Error).message}`);
+    core.setOutput("deleted", "false");
   }
 }
 

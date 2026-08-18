@@ -3,6 +3,9 @@ import {
   marker,
   formatUpdated,
   buildCommentBody,
+  buildCleanupCommentBody,
+  parseDeployId,
+  findPreviewComment,
   upsertPreviewComment,
 } from "./comment";
 
@@ -36,6 +39,42 @@ describe("buildCommentBody", () => {
     expect(body).toContain("`a1b2c3d4`");
     expect(body).toContain("https://dpl-a1b2c3d4.preview.example.com");
     expect(body).toContain("2026-07-13 14:02 UTC");
+  });
+
+  test("records the deploy id where cleanup can parse it back", () => {
+    expect(parseDeployId(body)).toBe("a1b2c3d4");
+  });
+});
+
+describe("parseDeployId", () => {
+  test("returns undefined when no deploy line is present", () => {
+    expect(parseDeployId("<!-- bunny-sites:my-site -->\nno deploy line")).toBe(
+      undefined,
+    );
+  });
+
+  test("ignores ids that aren't valid deploy ids", () => {
+    expect(parseDeployId("<!-- bunny-sites-deploy:NOT_AN_ID -->")).toBe(
+      undefined,
+    );
+  });
+});
+
+describe("buildCleanupCommentBody", () => {
+  const body = buildCleanupCommentBody(
+    "my-site",
+    "a1b2c3d4",
+    new Date("2026-08-18T09:30:00.000Z"),
+  );
+
+  test("keeps the marker so the comment stays sticky", () => {
+    expect(body.startsWith("<!-- bunny-sites:my-site -->")).toBe(true);
+  });
+
+  test("drops the deploy-id line so a re-run has nothing to delete", () => {
+    expect(parseDeployId(body)).toBe(undefined);
+    expect(body).toContain("deleted");
+    expect(body).toContain("`a1b2c3d4`");
   });
 });
 
@@ -107,5 +146,21 @@ describe("upsertPreviewComment", () => {
 
     expect(createComment).toHaveBeenCalledTimes(1);
     expect(updateComment).not.toHaveBeenCalled();
+  });
+
+  test("findPreviewComment returns the marker-matching comment", async () => {
+    const { octokit } = makeOctokit([
+      { id: 1, body: "unrelated" },
+      { id: 7, body: "<!-- bunny-sites:my-site -->\nbody" },
+    ]);
+
+    const found = await findPreviewComment(octokit, ctx, "my-site");
+    expect(found).toEqual({
+      id: 7,
+      body: "<!-- bunny-sites:my-site -->\nbody",
+    });
+    expect(await findPreviewComment(octokit, ctx, "missing-site")).toBe(
+      undefined,
+    );
   });
 });

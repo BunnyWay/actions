@@ -2,7 +2,9 @@ import { jest } from "@jest/globals";
 import * as exec from "@actions/exec";
 import {
   buildDeployArgs,
+  buildDeleteArgs,
   parseDeployOutput,
+  parseDeleteOutput,
   isUnchanged,
   runDeploy,
   lastLines,
@@ -43,6 +45,50 @@ describe("buildDeployArgs", () => {
   test("adds --force only when force is true", () => {
     expect(buildDeployArgs({ ...base, force: true })).toContain("--force");
     expect(buildDeployArgs(base)).not.toContain("--force");
+  });
+});
+
+describe("buildDeleteArgs", () => {
+  test("builds a non-interactive delete argv", () => {
+    expect(
+      buildDeleteArgs({ cliVersion: "0.13", site: "my-site", id: "a1b2c3d4" }),
+    ).toEqual([
+      "--yes",
+      "@bunny.net/cli@0.13",
+      "sites",
+      "deployments",
+      "delete",
+      "a1b2c3d4",
+      "--site",
+      "my-site",
+      "--force",
+      "--output",
+      "json",
+    ]);
+  });
+});
+
+describe("parseDeleteOutput", () => {
+  test("parses the delete shape", () => {
+    const out = parseDeleteOutput(
+      JSON.stringify({ site: "my-site", id: "a1b2c3d4", deleted: true }),
+    );
+    expect(out.id).toBe("a1b2c3d4");
+    expect(out.deleted).toBe(true);
+  });
+
+  test("keeps the already-gone no-op shape", () => {
+    const out = parseDeleteOutput(
+      JSON.stringify({ site: "my-site", id: "a1b2c3d4", deleted: false }),
+    );
+    expect(out.deleted).toBe(false);
+  });
+
+  test("throws when id/deleted are missing", () => {
+    expect(() => parseDeleteOutput(JSON.stringify({ foo: "bar" }))).toThrow();
+    expect(() =>
+      parseDeleteOutput(JSON.stringify({ id: "a1b2c3d4", deleted: "yes" })),
+    ).toThrow();
   });
 });
 

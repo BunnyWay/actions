@@ -66,6 +66,36 @@ export function buildDeployArgs(opts: DeployArgs): string[] {
   return args;
 }
 
+export type DeleteArgs = {
+  cliVersion: string;
+  site: string;
+  id: string;
+};
+
+// Deleting is always non-interactive here (--force skips the CLI's
+// confirmation, never its current/previous guard).
+export function buildDeleteArgs(opts: DeleteArgs): string[] {
+  return [
+    "--yes",
+    `@bunny.net/cli@${opts.cliVersion}`,
+    "sites",
+    "deployments",
+    "delete",
+    opts.id,
+    "--site",
+    opts.site,
+    "--force",
+    "--output",
+    "json",
+  ];
+}
+
+export type DeleteOutput = {
+  site: string;
+  id: string;
+  deleted: boolean;
+};
+
 export type DeployRun = {
   exitCode: number;
   stdout: string;
@@ -74,12 +104,7 @@ export type DeployRun = {
 
 // A non-zero exit is returned, not thrown, so the caller can surface the
 // stderr tail.
-export async function runDeploy(
-  opts: DeployArgs,
-  apiKey: string,
-): Promise<DeployRun> {
-  const args = buildDeployArgs(opts);
-
+async function runCli(args: string[], apiKey: string): Promise<DeployRun> {
   let stdout = "";
   let stderr = "";
 
@@ -102,8 +127,22 @@ export async function runDeploy(
   return { exitCode, stdout, stderr };
 }
 
+export async function runDeploy(
+  opts: DeployArgs,
+  apiKey: string,
+): Promise<DeployRun> {
+  return runCli(buildDeployArgs(opts), apiKey);
+}
+
+export async function runDelete(
+  opts: DeleteArgs,
+  apiKey: string,
+): Promise<DeployRun> {
+  return runCli(buildDeleteArgs(opts), apiKey);
+}
+
 // Parse from the first `{` to tolerate any leading noise on stdout.
-export function parseDeployOutput(stdout: string): DeployOutput {
+function parseJsonObject(stdout: string): Record<string, unknown> {
   const start = stdout.indexOf("{");
   if (start === -1) {
     throw new Error("No JSON object found in CLI output.");
@@ -120,13 +159,27 @@ export function parseDeployOutput(stdout: string): DeployOutput {
     throw new Error("Unexpected CLI output: not a JSON object.");
   }
 
-  const obj = parsed as Record<string, unknown>;
+  return parsed as Record<string, unknown>;
+}
+
+export function parseDeployOutput(stdout: string): DeployOutput {
+  const obj = parseJsonObject(stdout);
 
   if (typeof obj.site !== "string" || typeof obj.id !== "string") {
     throw new Error("Unexpected CLI output: missing site/id.");
   }
 
   return obj as DeployOutput;
+}
+
+export function parseDeleteOutput(stdout: string): DeleteOutput {
+  const obj = parseJsonObject(stdout);
+
+  if (typeof obj.id !== "string" || typeof obj.deleted !== "boolean") {
+    throw new Error("Unexpected CLI output: missing id/deleted.");
+  }
+
+  return obj as DeleteOutput;
 }
 
 export function lastLines(text: string, n: number): string {

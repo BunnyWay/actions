@@ -20,6 +20,10 @@ inputs:
     description: Upsert a sticky PR comment with the preview URL on pull_request events.
     required: false
     default: "true"
+  cleanup:
+    description: On pull_request "closed" events, delete the preview deploy recorded in the sticky comment (subscribe the workflow to the "closed" type; requires @bunny.net/cli >= 0.13.1).
+    required: false
+    default: "true"
   github_token:
     description: Token for the PR comment (needs pull-requests write).
     required: false
@@ -44,6 +48,8 @@ outputs:
     description: '"true" when this deploy is the live production deploy (use this rather than assuming the production input decided it).'
   unchanged:
     description: '"true" when the content was already deployed and nothing was uploaded.'
+  deleted:
+    description: '"true" when a closed PR''s preview deploy was deleted by cleanup.'
 
 runs:
   using: "node24"
