@@ -32057,7 +32057,7 @@ async function runDeploy(opts, apiKey) {
         ignoreReturnCode: true,
         env: {
             ...process.env,
-            BUNNY_API_KEY: apiKey,
+            BUNNYNET_API_KEY: apiKey,
         },
         listeners: {
             stdout: (data) => {
