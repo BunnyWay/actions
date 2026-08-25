@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    // The action runs on the node24 runtime; es2022 is what makes `ErrorOptions`
+    // and friends available to dependency typings.
+    "target": "es2022",
+    "module": "commonjs",
+    "outDir": "./lib",
+    "rootDir": "./src",
+    "strict": true,
+    "noImplicitAny": false,
+    "esModuleInterop": true,
+  },
+  "exclude": ["node_modules", "**/*.test.*"],
+}

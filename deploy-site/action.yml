@@ -1,0 +1,52 @@
+name: Deploy Site to Bunny
+author: Bunny Devs
+description: Deploy a static site to bunny.net
+
+inputs:
+  site:
+    description: Site name or storage zone ID.
+    required: true
+  directory:
+    description: Built output directory to deploy (e.g. dist).
+    required: true
+  api_key:
+    description: bunny.net API key (store it as a repository secret).
+    required: true
+  environment:
+    description: GitHub Environment the deploy is recorded under.
+    required: false
+    default: "production"
+  deployments:
+    description: Record the deploy in the repository's Environments via the GitHub Deployments API ("true"/"false"; needs deployments write).
+    required: false
+    default: "true"
+  github_token:
+    description: Token used to write the deployment record (needs deployments write).
+    required: false
+    default: ${{ github.token }}
+  cli_version:
+    description: "@bunny.net/cli version range to run (pin bumped per action release)."
+    required: false
+    default: "0.15"
+  force:
+    description: Redeploy even when content is unchanged.
+    required: false
+    default: "false"
+
+outputs:
+  deploy-id:
+    description: The deploy ID (git short sha on clean checkouts, else a content hash).
+  url:
+    description: The site's live URL (custom domain, else its b-cdn.net host; empty when the site has neither).
+  unchanged:
+    description: '"true" when the content was already deployed and nothing was uploaded.'
+  deployment-id:
+    description: The GitHub deployment record for this run (empty when nothing was recorded).
+
+runs:
+  using: "node24"
+  main: ".lib-action/index.js"
+
+branding:
+  color: "orange"
+  icon: "upload-cloud"

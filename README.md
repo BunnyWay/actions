@@ -4,8 +4,7 @@
   </a>
 </div>
 
-Github actions
-====
+# Github Actions
 
 This is the repository where we put actions to use with
 [Bunny](https://bunny.net)!
@@ -19,16 +18,16 @@ Each action can be used in your workflow this way:
 
 ```yaml
 steps:
-    - uses: BunnyWay/actions/<action>@<actions@ref>
+  - uses: BunnyWay/actions/<action>@<actions@ref>
 ```
 
-Each action will have its own documentation, you can check the associated documentation
-in each folder.
+Each action will have its own documentation, you can check the associated documentation in each folder.
 
 It contains:
 
 - [`BunnyWay/actions/deploy-script`](./deploy-script)
 - [`BunnyWay/actions/container-update-image`](./container-update-image)
+- [`BunnyWay/actions/deploy-site`](./deploy-site)
 
 ## Development
 
@@ -41,6 +40,6 @@ We handle versionning with [changeset](https://github.com/changesets/changesets)
 to indicate the kind of changes you are doing so we can have the auto-release
 process ongoing by doing:
 
-```
+```bash
 pnpm changeset
 ```
