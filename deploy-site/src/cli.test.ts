@@ -99,7 +99,7 @@ describe("parseDeployOutput", () => {
 });
 
 describe("runDeploy", () => {
-  test("spawns npx with the argv and BUNNY_API_KEY in env, capturing stdout", async () => {
+  test("spawns npx with the argv and BUNNYNET_API_KEY in env, capturing stdout", async () => {
     (exec.exec as jest.Mock).mockImplementation(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       async (_cmd: any, _args: any, options: any) => {
@@ -127,7 +127,7 @@ describe("runDeploy", () => {
     expect(call[0]).toBe("npx");
     expect(call[1]).toContain("--force");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((call[2] as any).env.BUNNY_API_KEY).toBe("secret-key");
+    expect((call[2] as any).env.BUNNYNET_API_KEY).toBe("secret-key");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((call[2] as any).ignoreReturnCode).toBe(true);
   });

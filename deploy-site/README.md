@@ -39,11 +39,11 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run build
-      - uses: BunnyWay/actions/deploy-site@deploy-site_1.0.0
+      - uses: BunnyWay/actions/deploy-site@deploy-site_0.1.1
         with:
           site: my-site
           directory: dist
-          api_key: ${{ secrets.BUNNY_API_KEY }}
+          api_key: ${{ secrets.BUNNYNET_API_KEY }}
 ```
 
 You can scaffold this workflow with `bunny sites ci init`. See the CLI repo's
@@ -113,10 +113,10 @@ deploy into the repository's Environments tab, which becomes the deploy history:
 
 ## Setting up the API key
 
-Store your bunny.net API key as a repository secret named `BUNNY_API_KEY`:
+Store your bunny.net API key as a repository secret named `BUNNYNET_API_KEY`:
 
 ```bash
-gh secret set BUNNY_API_KEY
+gh secret set BUNNYNET_API_KEY
 ```
 
 Or via the GitHub UI: **Settings → Secrets and variables → Actions → New
