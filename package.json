@@ -8,5 +8,10 @@
   "dependencies": {},
   "devDependencies": {
     "@changesets/cli": "^2.26.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "undici": "8.9.0"
+    }
   }
 }
