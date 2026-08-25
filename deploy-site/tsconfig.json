@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    // The action runs on the node24 runtime; es2022 is what makes `ErrorOptions`
+    // and friends available to dependency typings.
+    "target": "es2022",
     "module": "commonjs",
     "outDir": "./lib",
     "rootDir": "./src",
