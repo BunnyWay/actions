@@ -2,9 +2,7 @@ import { jest } from "@jest/globals";
 import * as exec from "@actions/exec";
 import {
   buildDeployArgs,
-  buildDeleteArgs,
   parseDeployOutput,
-  parseDeleteOutput,
   isUnchanged,
   runDeploy,
   lastLines,
@@ -14,17 +12,16 @@ jest.mock("@actions/exec");
 
 describe("buildDeployArgs", () => {
   const base = {
-    cliVersion: "0.13",
+    cliVersion: "0.15",
     directory: "dist",
     site: "my-site",
-    production: false,
     force: false,
   };
 
-  test("builds the minimal preview argv", () => {
+  test("builds the minimal deploy argv", () => {
     expect(buildDeployArgs(base)).toEqual([
       "--yes",
-      "@bunny.net/cli@0.13",
+      "@bunny.net/cli@0.15",
       "sites",
       "deploy",
       "dist",
@@ -35,60 +32,9 @@ describe("buildDeployArgs", () => {
     ]);
   });
 
-  test("adds --production only when production is true", () => {
-    expect(buildDeployArgs({ ...base, production: true })).toContain(
-      "--production",
-    );
-    expect(buildDeployArgs(base)).not.toContain("--production");
-  });
-
   test("adds --force only when force is true", () => {
     expect(buildDeployArgs({ ...base, force: true })).toContain("--force");
     expect(buildDeployArgs(base)).not.toContain("--force");
-  });
-});
-
-describe("buildDeleteArgs", () => {
-  test("builds a non-interactive delete argv", () => {
-    expect(
-      buildDeleteArgs({ cliVersion: "0.13", site: "my-site", id: "a1b2c3d4" }),
-    ).toEqual([
-      "--yes",
-      "@bunny.net/cli@0.13",
-      "sites",
-      "deployments",
-      "delete",
-      "a1b2c3d4",
-      "--site",
-      "my-site",
-      "--force",
-      "--output",
-      "json",
-    ]);
-  });
-});
-
-describe("parseDeleteOutput", () => {
-  test("parses the delete shape", () => {
-    const out = parseDeleteOutput(
-      JSON.stringify({ site: "my-site", id: "a1b2c3d4", deleted: true }),
-    );
-    expect(out.id).toBe("a1b2c3d4");
-    expect(out.deleted).toBe(true);
-  });
-
-  test("keeps the already-gone no-op shape", () => {
-    const out = parseDeleteOutput(
-      JSON.stringify({ site: "my-site", id: "a1b2c3d4", deleted: false }),
-    );
-    expect(out.deleted).toBe(false);
-  });
-
-  test("throws when id/deleted are missing", () => {
-    expect(() => parseDeleteOutput(JSON.stringify({ foo: "bar" }))).toThrow();
-    expect(() =>
-      parseDeleteOutput(JSON.stringify({ id: "a1b2c3d4", deleted: "yes" })),
-    ).toThrow();
   });
 });
 
@@ -100,46 +46,42 @@ describe("parseDeployOutput", () => {
       source: "git",
       files: 12,
       bytes: 34567,
-      promoted: false,
-      production: null,
-      preview: "https://dpl-a1b2c3d4.preview.example.com",
+      unchanged: false,
+      live: true,
+      production: "https://example.com",
     });
 
     const out = parseDeployOutput(json);
     expect(out.site).toBe("my-site");
     expect(out.id).toBe("a1b2c3d4");
-    expect(out.preview).toBe("https://dpl-a1b2c3d4.preview.example.com");
+    expect(out.production).toBe("https://example.com");
+    expect(out.live).toBe(true);
     expect(isUnchanged(out)).toBe(false);
   });
 
-  test("parses the unchanged (no-op) shape", () => {
+  test("parses the unchanged (already live) shape", () => {
     const json = JSON.stringify({
       site: "my-site",
       id: "a1b2c3d4",
       unchanged: true,
       live: true,
       production: "https://my-site.b-cdn.net",
-      preview: null,
     });
 
     const out = parseDeployOutput(json);
     expect(isUnchanged(out)).toBe(true);
     expect(out.production).toBe("https://my-site.b-cdn.net");
-    expect(out.preview).toBeNull();
   });
 
   test("tolerates leading noise before the first {", () => {
-    const noisy =
-      'some progress line\n{"site":"s","id":"i","preview":null,"production":null}';
-    const out = parseDeployOutput(noisy);
-    expect(out.site).toBe("s");
+    const noisy = 'some progress line\n{"site":"s","id":"i","production":null}';
+    expect(parseDeployOutput(noisy).site).toBe("s");
   });
 
-  test("null URLs stay null (caller maps to empty string)", () => {
+  test("a null production URL stays null (caller maps to empty string)", () => {
     const out = parseDeployOutput(
-      JSON.stringify({ site: "s", id: "i", preview: null, production: null }),
+      JSON.stringify({ site: "s", id: "i", production: null }),
     );
-    expect(out.preview).toBeNull();
     expect(out.production).toBeNull();
   });
 
@@ -169,11 +111,10 @@ describe("runDeploy", () => {
 
     const result = await runDeploy(
       {
-        cliVersion: "0.13",
+        cliVersion: "0.15",
         directory: "dist",
         site: "my-site",
-        production: true,
-        force: false,
+        force: true,
       },
       "secret-key",
     );
@@ -184,7 +125,7 @@ describe("runDeploy", () => {
 
     const call = (exec.exec as jest.Mock).mock.calls[0] as unknown[];
     expect(call[0]).toBe("npx");
-    expect(call[1]).toContain("--production");
+    expect(call[1]).toContain("--force");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((call[2] as any).env.BUNNY_API_KEY).toBe("secret-key");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -196,10 +137,9 @@ describe("runDeploy", () => {
 
     const result = await runDeploy(
       {
-        cliVersion: "0.13",
+        cliVersion: "0.15",
         directory: "dist",
         site: "my-site",
-        production: false,
         force: false,
       },
       "secret-key",

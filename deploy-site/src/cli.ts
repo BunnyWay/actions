@@ -3,40 +3,29 @@ import * as exec from "@actions/exec";
 // Wraps the `@bunny.net/cli` `sites deploy` command. This is the only deploy
 // path; the action never talks to the bunny API directly.
 
-// The two `sites deploy --output json` payloads (verified against
-// @bunny.net/cli 0.13): a fresh deploy, and the no-op taken when the content
-// is already uploaded.
-export type DeployedOutput = {
+// The `sites deploy --output json` payload (verified against @bunny.net/cli
+// 0.15). Deploying is publishing, so there is a single shape and `live` is
+// always true; `unchanged` is true when the content was already uploaded, and
+// the already-live no-op omits the upload counters entirely.
+export type DeployOutput = {
   site: string;
   id: string;
-  source: "git" | "content";
-  files: number;
-  bytes: number;
-  promoted: boolean;
+  unchanged?: boolean;
+  live?: boolean;
   production: string | null;
-  preview: string | null;
+  source?: "git" | "content";
+  files?: number;
+  bytes?: number;
 };
 
-export type UnchangedOutput = {
-  site: string;
-  id: string;
-  unchanged: true;
-  live: boolean;
-  production: string | null;
-  preview: string | null;
-};
-
-export type DeployOutput = DeployedOutput | UnchangedOutput;
-
-export function isUnchanged(output: DeployOutput): output is UnchangedOutput {
-  return (output as UnchangedOutput).unchanged === true;
+export function isUnchanged(output: DeployOutput): boolean {
+  return output.unchanged === true;
 }
 
 export type DeployArgs = {
   cliVersion: string;
   directory: string;
   site: string;
-  production: boolean;
   force: boolean;
 };
 
@@ -53,10 +42,6 @@ export function buildDeployArgs(opts: DeployArgs): string[] {
     opts.site,
   ];
 
-  if (opts.production) {
-    args.push("--production");
-  }
-
   if (opts.force) {
     args.push("--force");
   }
@@ -66,36 +51,6 @@ export function buildDeployArgs(opts: DeployArgs): string[] {
   return args;
 }
 
-export type DeleteArgs = {
-  cliVersion: string;
-  site: string;
-  id: string;
-};
-
-// Deleting is always non-interactive here (--force skips the CLI's
-// confirmation, never its current/previous guard).
-export function buildDeleteArgs(opts: DeleteArgs): string[] {
-  return [
-    "--yes",
-    `@bunny.net/cli@${opts.cliVersion}`,
-    "sites",
-    "deployments",
-    "delete",
-    opts.id,
-    "--site",
-    opts.site,
-    "--force",
-    "--output",
-    "json",
-  ];
-}
-
-export type DeleteOutput = {
-  site: string;
-  id: string;
-  deleted: boolean;
-};
-
 export type DeployRun = {
   exitCode: number;
   stdout: string;
@@ -104,11 +59,14 @@ export type DeployRun = {
 
 // A non-zero exit is returned, not thrown, so the caller can surface the
 // stderr tail.
-async function runCli(args: string[], apiKey: string): Promise<DeployRun> {
+export async function runDeploy(
+  opts: DeployArgs,
+  apiKey: string,
+): Promise<DeployRun> {
   let stdout = "";
   let stderr = "";
 
-  const exitCode = await exec.exec("npx", args, {
+  const exitCode = await exec.exec("npx", buildDeployArgs(opts), {
     ignoreReturnCode: true,
     env: {
       ...process.env,
@@ -127,22 +85,8 @@ async function runCli(args: string[], apiKey: string): Promise<DeployRun> {
   return { exitCode, stdout, stderr };
 }
 
-export async function runDeploy(
-  opts: DeployArgs,
-  apiKey: string,
-): Promise<DeployRun> {
-  return runCli(buildDeployArgs(opts), apiKey);
-}
-
-export async function runDelete(
-  opts: DeleteArgs,
-  apiKey: string,
-): Promise<DeployRun> {
-  return runCli(buildDeleteArgs(opts), apiKey);
-}
-
 // Parse from the first `{` to tolerate any leading noise on stdout.
-function parseJsonObject(stdout: string): Record<string, unknown> {
+export function parseDeployOutput(stdout: string): DeployOutput {
   const start = stdout.indexOf("{");
   if (start === -1) {
     throw new Error("No JSON object found in CLI output.");
@@ -159,27 +103,12 @@ function parseJsonObject(stdout: string): Record<string, unknown> {
     throw new Error("Unexpected CLI output: not a JSON object.");
   }
 
-  return parsed as Record<string, unknown>;
-}
-
-export function parseDeployOutput(stdout: string): DeployOutput {
-  const obj = parseJsonObject(stdout);
-
+  const obj = parsed as Record<string, unknown>;
   if (typeof obj.site !== "string" || typeof obj.id !== "string") {
     throw new Error("Unexpected CLI output: missing site/id.");
   }
 
   return obj as DeployOutput;
-}
-
-export function parseDeleteOutput(stdout: string): DeleteOutput {
-  const obj = parseJsonObject(stdout);
-
-  if (typeof obj.id !== "string" || typeof obj.deleted !== "boolean") {
-    throw new Error("Unexpected CLI output: missing id/deleted.");
-  }
-
-  return obj as DeleteOutput;
 }
 
 export function lastLines(text: string, n: number): string {

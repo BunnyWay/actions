@@ -1,6 +1,6 @@
 name: Deploy Site to Bunny
 author: Bunny Devs
-description: Deploy a static site to bunny.net with preview URLs per deploy.
+description: Deploy a static site to bunny.net
 
 inputs:
   site:
@@ -12,26 +12,22 @@ inputs:
   api_key:
     description: bunny.net API key (store it as a repository secret).
     required: true
-  production:
-    description: Publish this deploy as the live site ("true"/"false", default preview only).
+  environment:
+    description: GitHub Environment the deploy is recorded under.
     required: false
-    default: "false"
-  comment:
-    description: Upsert a sticky PR comment with the preview URL on pull_request events.
-    required: false
-    default: "true"
-  cleanup:
-    description: On pull_request "closed" events, delete the preview deploy recorded in the sticky comment (subscribe the workflow to the "closed" type; requires @bunny.net/cli >= 0.13.1).
+    default: "production"
+  deployments:
+    description: Record the deploy in the repository's Environments via the GitHub Deployments API ("true"/"false"; needs deployments write).
     required: false
     default: "true"
   github_token:
-    description: Token for the PR comment (needs pull-requests write).
+    description: Token used to write the deployment record (needs deployments write).
     required: false
     default: ${{ github.token }}
   cli_version:
     description: "@bunny.net/cli version range to run (pin bumped per action release)."
     required: false
-    default: "0.13"
+    default: "0.15"
   force:
     description: Redeploy even when content is unchanged.
     required: false
@@ -40,16 +36,12 @@ inputs:
 outputs:
   deploy-id:
     description: The deploy ID (git short sha on clean checkouts, else a content hash).
-  preview-url:
-    description: Immutable preview URL for this deploy (empty when the preview zone is not ready yet).
-  production-url:
+  url:
     description: The site's live URL (custom domain, else its b-cdn.net host; empty when the site has neither).
-  promoted:
-    description: '"true" when this deploy is the live production deploy (use this rather than assuming the production input decided it).'
   unchanged:
     description: '"true" when the content was already deployed and nothing was uploaded.'
-  deleted:
-    description: '"true" when a closed PR''s preview deploy was deleted by cleanup.'
+  deployment-id:
+    description: The GitHub deployment record for this run (empty when nothing was recorded).
 
 runs:
   using: "node24"

@@ -2,7 +2,7 @@ import { jest } from "@jest/globals";
 import * as core from "@actions/core";
 import * as fs from "fs";
 import * as cli from "./cli";
-import * as comment from "./comment";
+import * as deployment from "./deployment";
 
 jest.mock("@actions/core");
 jest.mock("fs", () => ({
@@ -10,13 +10,16 @@ jest.mock("fs", () => ({
   existsSync: jest.fn(),
 }));
 jest.mock("./cli");
-jest.mock("./comment");
+jest.mock("./deployment");
 
 // A mutable context we can reshape per test.
 const context = {
   eventName: "push",
-  payload: {} as { action?: string; pull_request?: { number: number } },
+  payload: {} as Record<string, unknown>,
   repo: { owner: "acme", repo: "web" },
+  sha: "a1b2c3d4",
+  serverUrl: "https://github.com",
+  runId: 7,
 };
 
 jest.mock("@actions/github", () => ({
@@ -34,13 +37,22 @@ const DEPLOYED = {
   source: "git",
   files: 3,
   bytes: 100,
-  promoted: false,
-  production: null,
-  preview: "https://dpl-a1b2c3d4.preview.example.com",
+  unchanged: false,
+  live: true,
+  production: "https://example.com",
 };
 
 type Inputs = Record<string, string>;
 type Bools = Record<string, boolean>;
+
+const BASE_INPUTS: Inputs = {
+  site: "my-site",
+  directory: "dist",
+  api_key: "secret-key",
+  github_token: "gh-token",
+  environment: "production",
+  cli_version: "0.15",
+};
 
 function setInputs(inputs: Inputs, bools: Bools) {
   (core.getInput as jest.Mock).mockImplementation(
@@ -51,6 +63,12 @@ function setInputs(inputs: Inputs, bools: Bools) {
   );
 }
 
+function statusCalls(): Array<{ state: string; environmentUrl?: string }> {
+  return (deployment.setDeploymentStatus as jest.Mock).mock.calls.map(
+    (call) => (call as unknown[])[3] as { state: string },
+  );
+}
+
 describe("action run", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -58,16 +76,7 @@ describe("action run", () => {
     context.eventName = "push";
     context.payload = {};
 
-    setInputs(
-      {
-        site: "my-site",
-        directory: "dist",
-        api_key: "secret-key",
-        github_token: "gh-token",
-        cli_version: "0.13",
-      },
-      { production: false, comment: true, force: false, cleanup: true },
-    );
+    setInputs(BASE_INPUTS, { deployments: true, force: false });
 
     (fs.existsSync as jest.Mock).mockReturnValue(true);
 
@@ -95,88 +104,68 @@ describe("action run", () => {
         .slice(-(n as number))
         .join("\n"),
     );
-    (comment.upsertPreviewComment as jest.Mock).mockResolvedValue(
+
+    (deployment.createDeployment as jest.Mock).mockResolvedValue(99 as never);
+    (deployment.setDeploymentStatus as jest.Mock).mockResolvedValue(
       undefined as never,
     );
-
-    (comment.findPreviewComment as jest.Mock).mockResolvedValue({
-      id: 7,
-      body: "<!-- bunny-sites:my-site -->\n<!-- bunny-sites-deploy:a1b2c3d4 -->\nbody",
-    } as never);
-    (comment.parseDeployId as jest.Mock).mockReturnValue("a1b2c3d4");
-    (comment.buildCleanupCommentBody as jest.Mock).mockReturnValue(
-      "cleanup body",
+    (deployment.runLogUrl as jest.Mock).mockReturnValue(
+      "https://github.com/acme/web/actions/runs/7",
     );
-    (comment.upsertComment as jest.Mock).mockResolvedValue(undefined as never);
-    (cli.runDelete as jest.Mock).mockResolvedValue({
-      exitCode: 0,
-      stdout: "{}",
-      stderr: "",
-    } as never);
-    (cli.parseDeleteOutput as jest.Mock).mockReturnValue({
-      site: "my-site",
-      id: "a1b2c3d4",
-      deleted: true,
-    });
   });
 
-  test("masks the api key and deploys, setting the five outputs", async () => {
+  test("masks the api key, deploys, and sets the outputs", async () => {
     await run();
 
     expect(core.setSecret).toHaveBeenCalledWith("secret-key");
     expect(cli.runDeploy).toHaveBeenCalledWith(
       {
-        cliVersion: "0.13",
+        cliVersion: "0.15",
         directory: "dist",
         site: "my-site",
-        production: false,
         force: false,
       },
       "secret-key",
     );
     expect(core.setOutput).toHaveBeenCalledWith("deploy-id", "a1b2c3d4");
-    expect(core.setOutput).toHaveBeenCalledWith(
-      "preview-url",
-      DEPLOYED.preview,
-    );
-    expect(core.setOutput).toHaveBeenCalledWith("production-url", "");
-    expect(core.setOutput).toHaveBeenCalledWith("promoted", "false");
+    expect(core.setOutput).toHaveBeenCalledWith("url", "https://example.com");
     expect(core.setOutput).toHaveBeenCalledWith("unchanged", "false");
     expect(core.setFailed).not.toHaveBeenCalled();
   });
 
-  test("promoted comes from the CLI output, not the production input", async () => {
-    // The CLI reports what actually went live: a fresh deploy carries
-    // `promoted`, a no-op carries `live`.
-    (cli.parseDeployOutput as jest.Mock).mockReturnValue({
-      ...DEPLOYED,
-      promoted: true,
-      production: "https://example.com",
-    });
-
-    await run();
-
-    expect(core.setOutput).toHaveBeenCalledWith("promoted", "true");
-    expect(core.setOutput).toHaveBeenCalledWith(
-      "production-url",
-      "https://example.com",
-    );
-  });
-
-  test("an unchanged deploy that is already live reports promoted", async () => {
+  test("a deploy of unchanged content is still live", async () => {
     (cli.parseDeployOutput as jest.Mock).mockReturnValue({
       site: "my-site",
       id: "a1b2c3d4",
       unchanged: true,
       live: true,
       production: "https://my-site.b-cdn.net",
-      preview: null,
     });
 
     await run();
 
-    expect(core.setOutput).toHaveBeenCalledWith("promoted", "true");
     expect(core.setOutput).toHaveBeenCalledWith("unchanged", "true");
+    expect(core.setOutput).toHaveBeenCalledWith(
+      "url",
+      "https://my-site.b-cdn.net",
+    );
+    expect(statusCalls().map((s) => s.state)).toEqual([
+      "in_progress",
+      "success",
+    ]);
+  });
+
+  test("a site with no hostname yet reports an empty url", async () => {
+    (cli.parseDeployOutput as jest.Mock).mockReturnValue({
+      ...DEPLOYED,
+      production: null,
+    });
+
+    await run();
+
+    expect(core.setOutput).toHaveBeenCalledWith("url", "");
+    // No environment_url rather than an empty one.
+    expect(statusCalls()[1].environmentUrl).toBeUndefined();
   });
 
   test("fails early when the directory is missing, without deploying", async () => {
@@ -188,194 +177,142 @@ describe("action run", () => {
       expect.stringContaining("does not exist"),
     );
     expect(cli.runDeploy).not.toHaveBeenCalled();
+    // Nothing was attempted, so nothing is recorded.
+    expect(deployment.createDeployment).not.toHaveBeenCalled();
   });
 
-  test("fails with the stderr tail on non-zero exit and skips the comment", async () => {
-    context.eventName = "pull_request";
-    context.payload = { pull_request: { number: 42 } };
-    (cli.runDeploy as jest.Mock).mockResolvedValue({
-      exitCode: 2,
-      stdout: "",
-      stderr: "line1\nboom: deploy failed",
-    } as never);
-
-    await run();
-
-    expect(core.setFailed).toHaveBeenCalledWith(
-      expect.stringContaining("boom: deploy failed"),
-    );
-    expect(comment.upsertPreviewComment).not.toHaveBeenCalled();
-  });
-
-  test("upserts a PR comment on pull_request events with a preview URL", async () => {
-    context.eventName = "pull_request";
-    context.payload = { pull_request: { number: 42 } };
-
-    await run();
-
-    expect(comment.upsertPreviewComment).toHaveBeenCalledTimes(1);
-    const [, ctxArg, inputArg] = (comment.upsertPreviewComment as jest.Mock)
-      .mock.calls[0] as [
-      unknown,
-      { owner: string; repo: string; issueNumber: number },
-      { site: string; previewUrl: string },
-    ];
-    expect(ctxArg.issueNumber).toBe(42);
-    expect(inputArg.site).toBe("my-site");
-    expect(inputArg.previewUrl).toBe(DEPLOYED.preview);
-  });
-
-  test("skips the comment on non-PR events", async () => {
-    context.eventName = "push";
-
-    await run();
-
-    expect(comment.upsertPreviewComment).not.toHaveBeenCalled();
-  });
-
-  test("skips the comment when comment input is false", async () => {
-    context.eventName = "pull_request";
-    context.payload = { pull_request: { number: 42 } };
-    setInputs(
-      {
-        site: "my-site",
-        directory: "dist",
-        api_key: "secret-key",
-        github_token: "gh-token",
-        cli_version: "0.13",
-      },
-      { production: false, comment: false, force: false },
-    );
-
-    await run();
-
-    expect(comment.upsertPreviewComment).not.toHaveBeenCalled();
-  });
-
-  test("skips the comment when there is no preview URL", async () => {
-    context.eventName = "pull_request";
-    context.payload = { pull_request: { number: 42 } };
-    (cli.parseDeployOutput as jest.Mock).mockReturnValue({
-      site: "my-site",
-      id: "a1b2c3d4",
-      unchanged: true,
-      live: false,
-      production: null,
-      preview: null,
-    });
-
-    await run();
-
-    expect(core.setOutput).toHaveBeenCalledWith("preview-url", "");
-    expect(core.setOutput).toHaveBeenCalledWith("unchanged", "true");
-    expect(comment.upsertPreviewComment).not.toHaveBeenCalled();
-  });
-
-  test("passes --production/--force through to the CLI when requested", async () => {
-    setInputs(
-      {
-        site: "my-site",
-        directory: "dist",
-        api_key: "secret-key",
-        github_token: "gh-token",
-        cli_version: "0.13",
-      },
-      { production: true, comment: true, force: true },
-    );
-
-    await run();
-
-    expect(cli.runDeploy).toHaveBeenCalledWith(
-      expect.objectContaining({ production: true, force: true }),
-      "secret-key",
-    );
-  });
-
-  describe("closed PR cleanup", () => {
-    beforeEach(() => {
-      context.eventName = "pull_request";
-      context.payload = { action: "closed", pull_request: { number: 42 } };
-    });
-
-    test("deletes the recorded preview deploy instead of deploying", async () => {
+  describe("deployment record", () => {
+    test("opens the record before deploying and links the live URL on success", async () => {
       await run();
 
-      expect(cli.runDeploy).not.toHaveBeenCalled();
-      expect(cli.runDelete).toHaveBeenCalledWith(
-        { cliVersion: "0.13", site: "my-site", id: "a1b2c3d4" },
-        "secret-key",
-      );
-      expect(core.setOutput).toHaveBeenCalledWith("deleted", "true");
-      expect(comment.upsertComment).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ issueNumber: 42 }),
-        "my-site",
-        "cleanup body",
-      );
-      expect(core.setFailed).not.toHaveBeenCalled();
+      const openCall = (deployment.createDeployment as jest.Mock).mock
+        .calls[0] as unknown[];
+      expect(openCall[1]).toMatchObject({
+        owner: "acme",
+        repo: "web",
+        ref: "a1b2c3d4",
+      });
+      expect(openCall[2]).toMatchObject({ environment: "production" });
+
+      expect(core.setOutput).toHaveBeenCalledWith("deployment-id", "99");
+      expect(statusCalls()).toEqual([
+        expect.objectContaining({ state: "in_progress" }),
+        expect.objectContaining({
+          state: "success",
+          environmentUrl: "https://example.com",
+        }),
+      ]);
     });
 
-    test("does nothing when cleanup input is false", async () => {
-      setInputs(
-        {
-          site: "my-site",
-          directory: "dist",
-          api_key: "secret-key",
-          github_token: "gh-token",
-          cli_version: "0.13",
-        },
-        { production: false, comment: true, force: false, cleanup: false },
-      );
-
-      await run();
-
-      expect(cli.runDelete).not.toHaveBeenCalled();
-      expect(cli.runDeploy).not.toHaveBeenCalled();
-      expect(core.setFailed).not.toHaveBeenCalled();
-    });
-
-    test("skips when no preview is recorded on the PR", async () => {
-      (comment.findPreviewComment as jest.Mock).mockResolvedValue(
-        undefined as never,
-      );
-
-      await run();
-
-      expect(cli.runDelete).not.toHaveBeenCalled();
-      expect(core.setOutput).toHaveBeenCalledWith("deleted", "false");
-      expect(core.setFailed).not.toHaveBeenCalled();
-    });
-
-    test("a failed delete is a warning, never a job failure", async () => {
-      (cli.runDelete as jest.Mock).mockResolvedValue({
-        exitCode: 1,
+    test("records a failed deploy as a failure", async () => {
+      (cli.runDeploy as jest.Mock).mockResolvedValue({
+        exitCode: 2,
         stdout: "",
-        stderr: "boom: is the live production deploy",
+        stderr: "line1\nboom: deploy failed",
       } as never);
 
       await run();
 
-      expect(core.warning).toHaveBeenCalledWith(
-        expect.stringContaining("boom: is the live production deploy"),
+      expect(core.setFailed).toHaveBeenCalledWith(
+        expect.stringContaining("boom: deploy failed"),
       );
-      expect(core.setOutput).toHaveBeenCalledWith("deleted", "false");
-      expect(comment.upsertComment).not.toHaveBeenCalled();
+      expect(statusCalls().map((s) => s.state)).toEqual([
+        "in_progress",
+        "failure",
+      ]);
+    });
+
+    test("records an unexpected throw as an error", async () => {
+      (cli.parseDeployOutput as jest.Mock).mockImplementation(() => {
+        throw new Error("Could not parse CLI JSON output.");
+      });
+
+      await run();
+
+      expect(statusCalls().map((s) => s.state)).toEqual([
+        "in_progress",
+        "error",
+      ]);
+      expect(core.setFailed).toHaveBeenCalledWith(
+        expect.stringContaining("Could not parse"),
+      );
+    });
+
+    test("skips recording when deployments is false", async () => {
+      setInputs(BASE_INPUTS, { deployments: false, force: false });
+
+      await run();
+
+      expect(deployment.createDeployment).not.toHaveBeenCalled();
+      expect(deployment.setDeploymentStatus).not.toHaveBeenCalled();
       expect(core.setFailed).not.toHaveBeenCalled();
+    });
+
+    test("skips recording when no github_token is provided", async () => {
+      setInputs(
+        { ...BASE_INPUTS, github_token: "" },
+        { deployments: true, force: false },
+      );
+
+      await run();
+
+      expect(core.warning).toHaveBeenCalledWith(
+        expect.stringContaining("github_token"),
+      );
+      expect(deployment.createDeployment).not.toHaveBeenCalled();
+      expect(core.setFailed).not.toHaveBeenCalled();
+    });
+
+    // A repo that forgot `deployments: write` should still ship.
+    test("a record that can't be opened is a warning, not a job failure", async () => {
+      (deployment.createDeployment as jest.Mock).mockRejectedValue(
+        new Error("Resource not accessible by integration") as never,
+      );
+
+      await run();
+
+      expect(core.warning).toHaveBeenCalledWith(
+        expect.stringContaining("deployments: write"),
+      );
+      expect(cli.runDeploy).toHaveBeenCalled();
+      expect(core.setFailed).not.toHaveBeenCalled();
+    });
+
+    test("a record that can't be closed is a warning, not a job failure", async () => {
+      (deployment.setDeploymentStatus as jest.Mock).mockRejectedValue(
+        new Error("api down") as never,
+      );
+
+      await run();
+
+      expect(core.warning).toHaveBeenCalledWith(
+        expect.stringContaining("api down"),
+      );
+      expect(core.setFailed).not.toHaveBeenCalled();
+    });
+
+    test("uses the environment input", async () => {
+      setInputs(
+        { ...BASE_INPUTS, environment: "staging" },
+        { deployments: true, force: false },
+      );
+
+      await run();
+
+      const openCall = (deployment.createDeployment as jest.Mock).mock
+        .calls[0] as unknown[];
+      expect(openCall[2]).toMatchObject({ environment: "staging" });
     });
   });
 
-  test("a comment failure is a warning, not a job failure", async () => {
-    context.eventName = "pull_request";
-    context.payload = { pull_request: { number: 42 } };
-    (comment.upsertPreviewComment as jest.Mock).mockRejectedValue(
-      new Error("api down") as never,
-    );
+  test("passes --force through to the CLI when requested", async () => {
+    setInputs(BASE_INPUTS, { deployments: true, force: true });
 
     await run();
 
-    expect(core.warning).toHaveBeenCalledWith(
-      expect.stringContaining("api down"),
+    expect(cli.runDeploy).toHaveBeenCalledWith(
+      expect.objectContaining({ force: true }),
+      "secret-key",
     );
-    expect(core.setFailed).not.toHaveBeenCalled();
   });
 });
