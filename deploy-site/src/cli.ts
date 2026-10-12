@@ -4,7 +4,7 @@ import * as exec from "@actions/exec";
 // path; the action never talks to the bunny API directly.
 
 // The `sites deploy --output json` payload (verified against @bunny.net/cli
-// 0.15). Deploying is publishing, so there is a single shape and `live` is
+// 0.19). Deploying is publishing, so there is a single shape and `live` is
 // always true; `unchanged` is true when the content was already uploaded, and
 // the already-live no-op omits the upload counters entirely.
 export type DeployOutput = {

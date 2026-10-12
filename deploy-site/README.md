@@ -64,7 +64,7 @@ commands and output directories.
 | `environment`  | no       | `"production"`        | GitHub Environment the deploy is recorded under.                                 |
 | `deployments`  | no       | `"true"`              | Record the deploy in the repository's Environments (needs `deployments: write`). |
 | `github_token` | no       | `${{ github.token }}` | Token used to write the deployment record.                                       |
-| `cli_version`  | no       | `"0.15"`              | `@bunny.net/cli` version range to run (pin bumped per action release).           |
+| `cli_version`  | no       | `"0.19"`              | `@bunny.net/cli` version range to run (pin bumped per action release).           |
 | `force`        | no       | `"false"`             | Redeploy even when content is unchanged.                                         |
 
 The action always passes `site` explicitly (as `--site`) so CI never depends on

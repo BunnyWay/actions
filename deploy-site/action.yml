@@ -27,7 +27,7 @@ inputs:
   cli_version:
     description: "@bunny.net/cli version range to run (pin bumped per action release)."
     required: false
-    default: "0.15"
+    default: "0.19"
   force:
     description: Redeploy even when content is unchanged.
     required: false

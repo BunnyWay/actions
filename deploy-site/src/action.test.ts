@@ -51,7 +51,7 @@ const BASE_INPUTS: Inputs = {
   api_key: "secret-key",
   github_token: "gh-token",
   environment: "production",
-  cli_version: "0.15",
+  cli_version: "0.19",
 };
 
 function setInputs(inputs: Inputs, bools: Bools) {
@@ -120,7 +120,7 @@ describe("action run", () => {
     expect(core.setSecret).toHaveBeenCalledWith("secret-key");
     expect(cli.runDeploy).toHaveBeenCalledWith(
       {
-        cliVersion: "0.15",
+        cliVersion: "0.19",
         directory: "dist",
         site: "my-site",
         force: false,
