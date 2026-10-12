@@ -1,5 +1,11 @@
 # deploy-site
 
+## 0.1.2
+
+### Patch Changes
+
+- 9c2a05c: Run `@bunny.net/cli` 0.19 by default. Newer CLI releases write site state in a format that 0.15 can't read, so deploying a site created or deployed with a newer CLI failed with `No site found` or `is not a bunny site`.
+
 ## 0.1.1
 
 ### Patch Changes
